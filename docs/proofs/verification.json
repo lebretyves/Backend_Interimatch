@@ -15,5 +15,6 @@
     }
   ],
   "testsPassed": 56,
-  "scope": "Unit and HTTP integration tests including real local n8n workflows. Provider scripts and separate n8n callback API are not instrumented."
+  "scope": "Unit and HTTP integration tests including real local n8n workflows. Provider scripts and separate n8n callback API are not instrumented.",
+  "codeCommit": "e5a2d72db53559d7ee787e95e9d07ecb6d6ea574"
 }

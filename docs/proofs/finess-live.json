@@ -32,5 +32,6 @@
     "identity-without-coordinates"
   ],
   "coordinatesPolicy": "Use range-valid source pairs; no inferred projected conversion; conflicting pairs remain unknown",
-  "organizationRightsGranted": false
+  "organizationRightsGranted": false,
+  "codeCommit": "e5a2d72db53559d7ee787e95e9d07ecb6d6ea574"
 }

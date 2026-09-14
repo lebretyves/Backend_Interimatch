@@ -72,3 +72,5 @@ node backend/dist/cli.js retry-outbox --event UUID_EVENEMENT
 ```
 
 Les tests utilisent des données fictives dans les bases locales et l'instance n8n locale. Le processus API appelé par n8n et les scripts de recette fournisseur ne sont pas instrumentés par la couverture. Un audit npm à zéro concerne uniquement les dépendances npm.
+
+Code teste : `e5a2d72db53559d7ee787e95e9d07ecb6d6ea574`. Les modifications suivantes de preuves/documentation ne remplacent pas cette reference de code.
