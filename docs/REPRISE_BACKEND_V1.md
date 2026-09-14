@@ -37,3 +37,7 @@ Lire cette note et git status, puis README.md. Vérifier les services ; ne pas r
 
 ## Dernier point de code verifie
 Commit 28923fc : 44 tests passent. Bundle restaure dans backups/restore-code-28923fc ; npm ci, typecheck et build reussis dans cette copie. Preuve : docs/proofs/code-recovery.json. Le depot principal et la copie restauree ont des dependances distinctes. Cette verification porte sur le code, pas une restauration complete de toutes les donnees.
+
+## Synchronisation documentaire du 14 septembre 2026
+
+README et REQUIREMENTS_V1.md relient les exigences, preuves, architecture et flux. Le plan décrit maintenant les fichiers présents. Les archives sources et le code restent inchangés ; les 44 tests renvoient au commit 28923fc. Les limites de recette, fournisseurs et production sont conservées.

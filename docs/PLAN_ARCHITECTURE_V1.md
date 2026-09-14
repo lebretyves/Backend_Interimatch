@@ -1,127 +1,59 @@
-# Plan technique de l'architecture V1
-Cible pour quatre personnes sur onze jours, rendu fixe. Ce plan décrit les fichiers à créer dans le futur dépôt applicatif ; ces répertoires de code ne sont pas présentés comme déjà implémentés.
+# Plan technique du backend InfiMatch
 
-## 1. Organisation du dépôt
+Ce plan décrit les fichiers présents. La cible reste la V1 validée pour quatre personnes et onze jours ; le frontend et le déploiement distant restent à réaliser.
+
 ```text
-interimatch/
-  frontend/                         Next.js et TypeScript
-    src/
-      app/                          Pages publiques et espaces privés
-      components/                   Composants partagés
-      features/                     Profils, recherche, calendrier, dossiers
-      lib/api/                      Client généré et gestion des erreurs
-  backend/
-    src/
-      main.ts                       Démarrage HTTP
-      app.module.ts                 Assemblage
-      cli.ts                        Commandes d'import, contexte sans HTTP
-      modules/
-        auth/
-        organizations/
-        profiles/
-        facilities/
-        availability/
-        missions/
-        applications/
-        assignments/
-        search/
-        favorites/
-        matching/
-        professional-verification/
-        documents/
-        mission-confirmations/
-        notifications/
-        public-data/
-        automation/
-        audit/
-        dashboards/
-      infrastructure/
-        database/                   Connexions SQL/MongoDB
-        storage/                    Adaptateur de stockage privé
-        config/                     Validation de configuration
-    migrations/                     Migrations TypeORM et SQL explicite
-    test/
-      integration/                  Bases réelles isolées
-      e2e/                          Parcours HTTP
-      fixtures/                     Données fictives identifiées
-  packages/
-    api-client/                     Types/client issus d'OpenAPI
-  workflows/
-    match-notification.json
-    unfilled-reminder.json
-    assignment-confirmation.json
-  infra/
-    compose.yaml
-    proxy/                          Routage et TLS
-  docs/
-    decisions/
-    preuves/
-    REPRISE_BACKEND_V1.md
-    MATRICE_VALIDATION_V1.csv
-  .env.example                      Noms de variables sans secrets
-  README.md
+InfiMatch/
+  backend/src/
+    main.ts                    Entrée HTTP
+    app.ts                     Assemblage, middleware, erreurs et OpenAPI
+    worker.ts                  Distribution continue de l'outbox
+    cli.ts                     Commander : migrations, import et maintenance
+    auth/                      Sessions et authentification
+    common/                    Accès, pagination, reprise SQL
+    profiles/                  Profil, disponibilités, qualifications et RPPS
+    organizations/             Affiliations et demandes d'établissement
+    missions/                  Missions, candidatures et affectations
+    domain/                    Règles pures et score
+    matching/                  Classement et explications MongoDB
+    listings/                  Recherche, favoris, tableaux de bord, historique
+    documents/                 Fichiers privés, chiffrement et banque fictive
+    automation/                Outbox, notifications, relances, confirmation
+    public-data/               Adaptateur des offres externes
+    reference-data/            Référentiels
+    database/                  Connexions, migrations, distance PostGIS
+    demo/                      Données fictives
+  workflows/                   matches.json, reminders.json, confirmation.json
+  infra/compose.yaml           PostgreSQL, MongoDB et profil n8n
+  scripts/                     Installation locale, contrôles et sauvegarde Git
+  docs/                        Exigences, schémas, OpenAPI, preuves et historique
+  data/                        Fichiers locaux privés, ignorés par Git
+  backups/                     Sauvegardes locales, ignorées par Git
+  package.json                 Commandes et workspace npm
+  package-lock.json            Versions exactes des dépendances
 ```
 
-Un workspace simple suffit ; aucun orchestrateur de monorepo supplémentaire nécessaire. Si le dépôt réel possède déjà une structure cohérente, garder ses noms et documenter la correspondance.
+Les petits modules regroupent contrôleurs et services dans leur fichier `*.module.ts`. Les migrations sont dans `database/schema.ts`, `extended.ts` et `harden.ts`. Il n'existe pas encore de répertoire frontend dans ce dépôt.
 
-## 2. Structure d'un module
-```text
-missions/
-  missions.module.ts
-  missions.controller.ts
-  dto/
-  application/                      Créer, publier, annuler, clôturer
-  domain/                           États et règles pures
-  persistence/                      Entités et repositories SQL
-```
+Une requête passe par la session, les protections d'écriture, la validation des DTO, les droits du cas d'usage puis les règles métier et la persistance. Les écritures critiques partagent une transaction et revérifient les droits actuels. Les réponses d'erreur masquent les détails internes et comportent un identifiant de requête.
 
-Les petits modules peuvent regrouper certains fichiers ; ne pas créer une interface pour chaque classe sans usage. Un module possède ses écritures et exporte des services précis. Aucun accès direct aux tables d'un autre module par ses contrôleurs.
+L'affectation verrouille mission, profil puis candidature. Les contraintes SQL garantissent un seul poste actif par mission et interdisent les chevauchements d'affectations d'un infirmier. Les appels fournisseurs et n8n restent hors de la transaction d'affectation.
 
-## 3. Circulation d'une requête
-HTTP → validation DTO → session et autorisation → cas d'usage → règles métier → transaction/repository → DTO de sortie.
+## Travail restant
 
-La même instance de transaction est transmise aux services d'une opération multi-modules. Les erreurs donnent code stable, message utile et requestId ; aucune entité contenant hash, secrets ou RIB n'est sérialisée directement.
+1. Compléter pagination des listes secondaires, idempotence des autres commandes sensibles et schémas OpenAPI de sortie.
+2. Valider les accès réels ANS et France Travail, puis la provenance et l'usage visible des données.
+3. Intégrer le frontend et les parcours de recette.
+4. Exercer les reprises après crash du worker et l'expiration concurrente de génération PDF.
+5. Vérifier le déploiement TLS, les privilèges des bases et la restauration complète.
 
-## 4. Flux critiques
-| Flux | Séquence |
-|---|---|
-| RPPS | Saisie → PENDING → appel API exact → FOUND ou NOT_FOUND ; panne → PENDING et reprise |
-| Import public | Acquisition → staging → nettoyage → normalisation → dédoublonnage → lot publié et rapport |
-| Matching | Éligibilité → score versionné → écriture MongoDB → explication autorisée |
-| Affectation | Verrous coopératifs → contrôles actuels → Assignment/Application/Mission/audit/outbox → commit |
-| Notification | Outbox réservée → n8n → action API idempotente → reçu final |
-| Confirmation | Affectation validée → n8n → PDF backend privé → statut READY → notification |
-| Annulation | Mission et affectation CANCELLED dans la même transaction → événement → document signalé annulé |
+La [note de reprise](REPRISE_BACKEND_V1.md) détaille les limites. Le [planning](PLANNING_4_PERSONNES_11_JOURS.md) est un plan d'équipe, pas un relevé de temps réellement passé.
 
-Les droits sont vérifiés dans les listes comme dans les détails. Le RPPS retrouvé ne remplace pas les autres qualifications. L'affectation est validée humainement par l'agence ; cela n'ajoute pas une validation manuelle RPPS.
+## Références
 
-## 5. Répartition technique à quatre
-| Personne / rôle | Responsabilité principale |
-|---|---|
-| A | Backend métier, auth, profils, missions, candidatures, consentements et affectations |
-| B | Référentiels, recherche/PostGIS, matching/MongoDB, RPPS et import CLI |
-| C | Frontend et intégration des parcours, accessibilité, responsive et SEO |
-| D | Infrastructure/CI, stockage chiffré, confirmation et n8n ; coordination recette |
-
-Les tests sont écrits par chaque responsable, avec revue croisée. Le détail quotidien figure dans le planning lié ci-dessous.
-
-## 6. Ordre de construction
-1. Contrats API, schéma SQL, démarrage local, accès externes et CI.
-2. Auth, affiliations et premier parcours profil → mission.
-3. Recherche, disponibilités et matching.
-4. Candidature, consentement et affectation atomique.
-5. Documents, RPPS, import public et favoris intégrés au frontend.
-6. Trois workflows, reprises et génération de confirmation.
-7. Recette complète, TLS, restauration, couverture, exports et soutenance.
-
-L'ordre est logique et les lots avancent en parallèle selon leurs dépendances. Commencer les tests d'accès externes dès le premier jour. Ne pas reporter toute l'intégration ou tous les tests à la fin.
-
-## 7. Documents de référence
-- [Architecture détaillée](../Interimatch_Sante_Architecture_Backend_V1.md)
-- [Prompt de développement](../Interimatch_Sante_Mega_Prompt_Backend_V1.md)
-- [Schéma](SCHEMA_ARCHITECTURE_V1.md)
-- [Planning quatre personnes / onze jours](PLANNING_4_PERSONNES_11_JOURS.md)
-- [Matrice de validation](MATRICE_VALIDATION_V1.csv)
-- [Accès API et preuves manquantes](ACCES_API_V1.md)
-
-Les identifiants de base, clés de chiffrement et tokens ne sont jamais placés dans le client généré, les exports n8n ou le dépôt.
+- [Exigences V1 et acceptation](REQUIREMENTS_V1.md)
+- [Schéma de l'architecture](SCHEMA_ARCHITECTURE_V1.md)
+- [Flux métier et techniques](FLUX_V1.md)
+- [Prompt source figé](references/Interimatch_Sante_Mega_Prompt_Backend_V1.md)
+- [Architecture source figée](references/Interimatch_Sante_Architecture_Backend_V1.md)
+- [Matrice complète](MATRICE_VALIDATION_V1.csv)

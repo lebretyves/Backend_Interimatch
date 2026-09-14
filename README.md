@@ -4,6 +4,17 @@ Monolithe modulaire NestJS 12 / Express, Node.js 24 / TypeScript, PostgreSQL + P
 
 Le périmètre cible reste **100 % de la V1 validée**. Ce dépôt contient une première réalisation exécutable et testée ; il ne constitue pas une déclaration de conformité intégrale ou de mise en production. Les écarts sont dans [la note de reprise](docs/REPRISE_BACKEND_V1.md).
 
+## Documentation du projet
+
+- [Requirements : exigences V1, acceptation et limites](docs/REQUIREMENTS_V1.md)
+- [Architecture avec schéma intégré](docs/SCHEMA_ARCHITECTURE_V1.md) et [plan des fichiers](docs/PLAN_ARCHITECTURE_V1.md)
+- [Flux : authentification, RPPS, matching, affectation et n8n](docs/FLUX_V1.md)
+- [Matrice complète des exigences](docs/MATRICE_VALIDATION_V1.csv) et [contrat OpenAPI](docs/openapi.json)
+
+Les schémas Mermaid sont inclus dans les fichiers Markdown et s'affichent dans un lecteur compatible. La [source architecture-v1.mmd](docs/architecture-v1.mmd) reste modifiable. Les documents distinguent le backend présent, les scénarios testés et les travaux restants.
+
+Dernier code vérifié : `28923fc`, **44 tests réussis**, couverture des lignes **70,11 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. Les accès réels ANS/France Travail, le frontend et le déploiement distant restent à valider.
+
 ## Démarrer sous PowerShell
 
 Prérequis : Node 24, npm, Git et Docker Desktop démarré. Depuis ce dossier :

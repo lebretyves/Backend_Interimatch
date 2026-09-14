@@ -1,57 +1,50 @@
-# Schéma d'architecture V1
-Architecture cible à implémenter ; aucune infrastructure déployée n'est attestée par ce schéma.
+# Architecture InfiMatch V1
+
+Vue synchronisée avec le backend du commit `28923fc`. API, worker et CLI partagent le code NestJS ; le worker est un processus séparé. Le frontend reste à intégrer et les accès fournisseurs réels à valider. Le proxy HTTPS appartient au déploiement restant à réaliser.
 
 ```mermaid
 flowchart LR
-    subgraph client["Utilisateurs"]
-        browser["Infirmier, établissement, agence"]
+    subgraph client["Accès"]
+        caller["Client HTTP local"]
+        front["Frontend Next.js prévu"]
     end
-    subgraph gateway["Entrée publique"]
-        proxy["Reverse proxy HTTPS"]
+    subgraph service["Backend : même code NestJS"]
+        api["API HTTP : main.ts"]
+        worker["Worker outbox : worker.ts"]
+        cli["CLI : cli.ts"]
     end
-    subgraph service["Applications"]
-        front["Frontend Next.js"]
-        api["API NestJS modulaire"]
-        cli["CLI d'import"]
+    subgraph datastore["Stockages locaux privés"]
+        sql["PostgreSQL / PostGIS : vérité métier"]
+        mongo["MongoDB : explications de matching"]
+        files["Fichiers privés AES-256-GCM"]
     end
-    subgraph datastore["Stockages privés"]
-        sql["PostgreSQL + PostGIS"]
-        mongo["MongoDB : MatchingRun"]
-        files["Documents chiffrés"]
+    subgraph async["Automatisation"]
+        n8n["n8n : 3 workflows et volume technique"]
     end
-    subgraph async["Automatisations privées"]
-        workflows["n8n : trois workflows"]
+    subgraph external["Accès réels restant à valider"]
+        ans["ANS : RPPS"]
+        ft["France Travail : offres"]
     end
-    subgraph external["Sources externes"]
-        offers["France Travail"]
-        rpps["Annuaire Santé RPPS"]
-        finess["FINESS"]
-    end
-    browser -->|"Accède en HTTPS"| proxy
-    proxy -->|"Sert les pages"| front
-    proxy -->|"Route /api/v1"| api
-    api -->|"Transactions et outbox"| sql
-    api -->|"Écrit et relit"| mongo
-    api -->|"Chiffre et restitue"| files
-    api <-->|"Webhooks et API interne"| workflows
-    api -->|"Recherche RPPS"| rpps
-    api -->|"Importe les offres"| offers
-    api -->|"Enrichit les établissements"| finess
-    cli -->|"Exécute le pipeline"| api
+    caller -->|"Cookie, Origin, CSRF"| api
+    front -.->|"Intégration à réaliser"| api
+    api -->|"Transactions, sessions, audit, outbox"| sql
+    api -->|"Historique minimisé et expiration"| mongo
+    api -->|"Chiffrement et téléchargement autorisé"| files
+    worker -->|"Réservation et reçu final"| sql
+    cli -->|"Migrations, import, réparation documentaire"| sql
+    cli -->|"Réconciliation des fichiers"| files
+    worker -.->|"Événements après commit"| n8n
+    n8n -.->|"Routes internes authentifiées"| api
+    api -.->|"Recherche exacte RPPS"| ans
+    cli -.->|"Acquisition des offres"| ft
 ```
 
-La flèche CLI → API représente l'utilisation des services applicatifs partagés dans un contexte NestJS sans serveur HTTP ; elle n'impose pas un appel HTTP ni un second pipeline. Les connecteurs externes sont les adaptateurs de PublicData et ProfessionalVerification.
+PostgreSQL est la source de vérité des comptes, affiliations, profils, missions, candidatures, affectations, sessions, favoris, notifications, audits, métadonnées documentaires et événements. PostGIS et btree_gist sont des extensions de cette même base. Les migrations remplacent toute synchronisation automatique du schéma.
 
-Le navigateur appelle /api/v1 via la même origine HTTPS que les pages. Next.js ne possède pas de connexion directe aux bases. Les modules métier restent dans une seule application NestJS.
+MongoDB conserve uniquement les explications minimisées et versionnées du matching. Sa panne ne doit pas être interprétée comme une absence de correspondances : l'API signale l'indisponibilité de l'historique. Les fichiers chiffrés restent privés et sont délivrés par l'API après contrôle des droits.
 
-PostgreSQL contient les utilisateurs, sessions, profils, missions, candidatures, consentements, affectations, notifications, audits, métadonnées de documents et événements d'outbox. PostGIS est une extension de cette même base. MongoDB ne contient que les explications minimisées du matching.
+n8n orchestre trois workflows. Les règles métier et la génération PDF restent dans le backend ; n8n possède son propre volume technique. Aucun fournisseur ne décide d'une affectation. L'agence valide humainement l'affectation, sans ajouter une validation manuelle du RPPS.
 
-Le distributeur d'outbox fait partie du code backend ; il transmet les événements validés à n8n. n8n appelle des routes internes authentifiées, privées et limitées. Sa persistance technique, distincte de la base métier, n'est pas détaillée dans cette vue simplifiée. Les trois workflows sont : notification de match ; relance ; génération backend d'une confirmation de mission.
+Les pointillés représentent les intégrations externes, asynchrones ou prévues, selon leur libellé. Les connexions du Compose sont locales ; ce dessin ne constitue pas une preuve de TLS en production. Aucun connecteur FINESS réel n'est représenté : le champ FINESS est obligatoire pour un établissement, mais ne confère aucun droit d'accès.
 
-Le stockage documentaire est privé, chiffré et accessible via le backend. Les échanges sensibles du déploiement distant sont protégés par TLS ; le dessin ne remplace pas la configuration des certificats.
-
-RPPS : FOUND satisfait la condition RPPS, NOT_FOUND bloque candidature/nouvelle affectation, PENDING maintient en attente. Les autres critères restent contrôlés. Références hors V1 ; attestation V2.
-
-Fichier Mermaid modifiable : [architecture-v1.mmd](architecture-v1.mmd).
-Plan du dépôt : [PLAN_ARCHITECTURE_V1.md](PLAN_ARCHITECTURE_V1.md).
-Planning : [PLANNING_4_PERSONNES_11_JOURS.md](PLANNING_4_PERSONNES_11_JOURS.md).
+Source modifiable : [architecture-v1.mmd](architecture-v1.mmd). Voir le [plan des fichiers](PLAN_ARCHITECTURE_V1.md), les [flux détaillés](FLUX_V1.md), les [exigences](REQUIREMENTS_V1.md) et la [reprise](REPRISE_BACKEND_V1.md).

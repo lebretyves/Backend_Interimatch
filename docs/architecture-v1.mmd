@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph client["Accès"]
+        caller["Client HTTP local"]
+        front["Frontend Next.js prévu"]
+    end
+    subgraph service["Backend : même code NestJS"]
+        api["API HTTP : main.ts"]
+        worker["Worker outbox : worker.ts"]
+        cli["CLI : cli.ts"]
+    end
+    subgraph datastore["Stockages locaux privés"]
+        sql["PostgreSQL / PostGIS : vérité métier"]
+        mongo["MongoDB : explications de matching"]
+        files["Fichiers privés AES-256-GCM"]
+    end
+    subgraph async["Automatisation"]
+        n8n["n8n : 3 workflows et volume technique"]
+    end
+    subgraph external["Accès réels restant à valider"]
+        ans["ANS : RPPS"]
+        ft["France Travail : offres"]
+    end
+    caller -->|"Cookie, Origin, CSRF"| api
+    front -.->|"Intégration à réaliser"| api
+    api -->|"Transactions, sessions, audit, outbox"| sql
+    api -->|"Historique minimisé et expiration"| mongo
+    api -->|"Chiffrement et téléchargement autorisé"| files
+    worker -->|"Réservation et reçu final"| sql
+    cli -->|"Migrations, import, réparation documentaire"| sql
+    cli -->|"Réconciliation des fichiers"| files
+    worker -.->|"Événements après commit"| n8n
+    n8n -.->|"Routes internes authentifiées"| api
+    api -.->|"Recherche exacte RPPS"| ans
+    cli -.->|"Acquisition des offres"| ft
