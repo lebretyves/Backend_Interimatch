@@ -18,5 +18,6 @@
   "additionalLiveChecks": [
     "france-travail-live.json",
     "finess-live.json"
-  ]
+  ],
+  "codeCommit": "05e171167b8e48404beae14bfe94b722f32ada75"
 }

@@ -1,6 +1,6 @@
 # Architecture InfiMatch V1
 
-Vue synchronisÃ©e avec le backend du commit `28923fc`. API, worker et CLI partagent le code NestJS ; le worker est un processus sÃ©parÃ©. Le frontend reste Ã  intÃ©grer et les accÃ¨s fournisseurs rÃ©els Ã  valider. Le proxy HTTPS appartient au dÃ©ploiement restant Ã  rÃ©aliser.
+Vue synchronisÃ©e avec le backend du commit `05e1711`. API, worker et CLI partagent le code NestJS ; le worker est un processus sÃ©parÃ©. Le frontend reste Ã  intÃ©grer et les accÃ¨s fournisseurs rÃ©els Ã  valider. Le proxy HTTPS appartient au dÃ©ploiement restant Ã  rÃ©aliser.
 
 ```mermaid
 flowchart LR

@@ -73,5 +73,6 @@
     "213VXYV",
     "213WBJX"
   ],
-  "scope": "Real provider acquisition, SQL persistence and same-batch replay; no frontend or complete provider contract validation"
+  "scope": "Real provider acquisition, SQL persistence and same-batch replay; no frontend or complete provider contract validation",
+  "codeCommit": "05e171167b8e48404beae14bfe94b722f32ada75"
 }
