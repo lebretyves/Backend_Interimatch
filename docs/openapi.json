@@ -3162,7 +3162,7 @@
     },
     "/api/v1/listings/search": {
       "post": {
-        "description": "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
+        "description": "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT. Authenticated search also adds profileCorrespondence; includeUncertainExternal defaults false and unverifiedSearchFilters identifies filters not satisfied by evidence.",
         "operationId": "ListingsController_search",
         "parameters": [],
         "requestBody": {
@@ -3177,6 +3177,111 @@
         },
         "responses": {
           "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Controlled API error; applicability depends on route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Listings"
+        ]
+      }
+    },
+    "/api/v1/me/listings/{id}/correspondence": {
+      "get": {
+        "description": "Private partial comparison against the authenticated nurse profile. No full score or verified eligibility. Public listing endpoints never expose profile comparisons.",
+        "operationId": "ListingsController_compareExternal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": ""
           },
           "400": {
@@ -6515,6 +6620,10 @@
       "SearchDto": {
         "type": "object",
         "properties": {
+          "includeUncertainExternal": {
+            "type": "boolean",
+            "description": "Include incomplete external leads, explicitly marked with unverified search filters. Default false."
+          },
           "qualifications": {
             "type": "array",
             "items": {

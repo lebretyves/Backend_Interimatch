@@ -2,7 +2,7 @@
 
 ## État actuel
 
-Le backend a été relu contre le prompt V1 puis retesté : **62 tests réussis**, compilation et typecheck réussis, couverture lignes 77,94 %, branches 82,62 %. Lire [le bilan complet](RECETTE_BACKEND_V1.md) avant de déclarer une fonctionnalité validée.
+Le backend a été relu contre le prompt V1 puis retesté : **71 tests réussis**, compilation et typecheck réussis, couverture lignes 79,38 %, branches 84,33 %. Lire [le bilan complet](RECETTE_BACKEND_V1.md) avant de déclarer une fonctionnalité validée.
 
 Sources figées et quatre empreintes contrôlées ; nouvelle numérotation du Word. Objectif 100 % de la V1, équipe de quatre et délai de onze jours. Aucun retrait de périmètre.
 
@@ -50,3 +50,8 @@ Le [journal](history/IMPLEMENTATION.md) conserve les incidents et états antéri
 ## Rectification France Travail du 15 septembre 2026
 
 [Rectificatif du catalogue V1](RECTIFICATIF_CATALOGUE_V1.md) et [contrat des offres externes](OFFRES_EXTERNES_V1.md). Collecte multi-recherches, classement prudent, conservation des informations fournisseur et correspondance sans score complet. Lot Paris : 134 offres importees et rejeu sans doublon ; 120 IDE, 7 IADE, 1 IBODE, 6 non confirmees. Frontend et synchronisation exhaustive restent a completer.
+
+
+## Comparaison partielle des annonces externes
+
+Comparaison au profil connecte et option includeUncertainExternal implementees. Informations inconnues et indices restent distincts des incompatibilites connues. Aucun score externe complet. 71 tests reussis ; preuve complementaire avec offres reelles et profils fictifs dans docs/proofs/external-partial-live.json. [Explication a transmettre](EXPLICATION_MATCHING_DONNEES_MANQUANTES.md) et [contrat API](OFFRES_EXTERNES_V1.md). Integration frontend restante.

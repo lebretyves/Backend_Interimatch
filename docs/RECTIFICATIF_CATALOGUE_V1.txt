@@ -91,3 +91,7 @@ Les informations manquantes ne sont ni inventées ni assimilées à une incompat
 Les règles F18 RPPS restent inchangées : absence confirmée bloquante, indisponibilité du fournisseur en attente.
 Attestation sur l'honneur et références professionnelles ne sont pas réintroduites en V1.
 Ce rectificatif ne transforme pas les annonces externes en contrats, missions internes ou candidatures suivies par InfiMatch.
+
+
+COMPLEMENT F04 / F05 / F16 / F20 ? COMPARAISON PARTIELLE
+Les annonces externes sont maintenant comparees au profil connecte sur les donnees interpretables. La recherche reste stricte par defaut ; une option explicite permet de voir les annonces incompletes, avec les filtres non verifies signales. Les informations absentes du profil et celles absentes de l annonce sont distinguees. Aucun score complet ni disponibilite supposee. Voir EXPLICATION_MATCHING_DONNEES_MANQUANTES.md et OFFRES_EXTERNES_V1.md. Ces precisions completent les regles d exclusion par defaut ci-dessus.

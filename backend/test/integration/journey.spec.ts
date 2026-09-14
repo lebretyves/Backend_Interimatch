@@ -917,3 +917,82 @@ test("OpenAPI documents idempotency headers and paginated response contracts", a
     "array",
   );
 });
+
+test("partial external comparison is private and incomplete leads require explicit opt-in", async () => {
+  const first = await account("NURSE"),
+    second = await account("NURSE");
+  await db.query(
+    "UPDATE profile SET qualifications=$2,rpps_status='FOUND' WHERE user_id=$1",
+    [first.id, ["IDE"]],
+  );
+  await db.query(
+    "UPDATE profile SET qualifications=$2,rpps_status='PENDING' WHERE user_id=$1",
+    [second.id, ["IADE"]],
+  );
+  const normalized = normalizeOffer({
+    id: "PRIVATE_PARTIAL",
+    intitule: "IDE Urgences",
+    description: "Fictional fixture",
+    typeContrat: "MIS",
+    lieuTravail: { libelle: "Paris" },
+  });
+  const [e] = await db.query(
+    "INSERT INTO external_offer(source,source_id,title,description,url,location_label,qualification,raw_hash,provenance) VALUES('TEST_FIXTURE',$1,$2,'Fictional','https://example.invalid/partial','Paris','IDE','fixture',$3) RETURNING id",
+    [randomUUID(), normalized.title, JSON.stringify(normalized.provenance)],
+  );
+  const id = "e_" + e.id,
+    path = "/api/v1/me/listings/" + id + "/correspondence";
+  try {
+    await request(app.getHttpServer()).get(path).expect(401);
+    const a = await first.agent.get(path).expect(200),
+      b = await second.agent.get(path).expect(200);
+    expect(a.headers["cache-control"]).toBe("no-store");
+    expect(a.body.profileCorrespondence.criteria.qualification.status).toBe(
+      "MATCH",
+    );
+    expect(b.body.profileCorrespondence.criteria.qualification.status).toBe(
+      "MISMATCH",
+    );
+    expect(a.body.profileCorrespondence.score).toBeNull();
+    expect(a.body.profileCorrespondence.criteria.availability.status).toBe(
+      "OFFER_MISSING",
+    );
+    const publicDetail = await request(app.getHttpServer())
+      .get("/api/v1/listings/" + id)
+      .expect(200);
+    expect(publicDetail.body.profileCorrespondence).toBeUndefined();
+    const filters = {
+      qualifications: ["IDE"],
+      start: "2030-01-10T08:00:00Z",
+      end: "2030-01-10T20:00:00Z",
+      limit: 50,
+    };
+    const strict = await post(first, "listings/search", filters).expect(201);
+    expect(strict.body.items.some((x: any) => x.id === id)).toBe(false);
+    const relaxed = await post(first, "listings/search", {
+      ...filters,
+      includeUncertainExternal: true,
+    }).expect(201);
+    const lead = relaxed.body.items.find((x: any) => x.id === id);
+    expect(lead.requestedFiltersVerified).toBe(false);
+    expect(lead.unverifiedSearchFilters).toEqual(["start", "end"]);
+    expect(lead.profileCorrespondence.criteria.availability.status).toBe(
+      "OFFER_MISSING",
+    );
+    expect(lead.profileCorrespondence.eligibilityVerified).toBe(false);
+    await post(first, "listings/search", {
+      ...filters,
+      includeUncertainExternal: "true",
+    }).expect(400);
+    await first.agent
+      .get("/api/v1/me/listings/not-an-id/correspondence")
+      .expect(404);
+    await db.query(
+      "UPDATE external_offer SET expires_at=now()-interval '1 day' WHERE id=$1",
+      [e.id],
+    );
+    await first.agent.get(path).expect(404);
+  } finally {
+    await db.query("DELETE FROM external_offer WHERE id=$1", [e.id]);
+  }
+});

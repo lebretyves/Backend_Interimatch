@@ -12,10 +12,21 @@ import {
   IsString,
   Matches,
   IsInt,
+  IsBoolean,
 } from "class-validator";
 import { BadRequestException } from "@nestjs/common";
 import { interval } from "../domain/matching";
 export class SearchDto {
+  @ApiProperty({
+    type: () => Boolean,
+    required: false,
+    description:
+      "Include incomplete external leads, explicitly marked with unverified search filters. Default false.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  includeUncertainExternal?: boolean;
+
   @ApiProperty({
     type: () => String,
     required: true,

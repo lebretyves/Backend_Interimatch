@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-14T22:58:21.256Z",
+  "date": "2026-09-14T23:29:16.302Z",
   "results": [
     {
       "command": "npm run typecheck",
@@ -14,11 +14,10 @@
       "exitCode": 0
     }
   ],
-  "testsPassed": 62,
+  "testsPassed": 71,
   "coverage": {
-    "lines": 77.94,
-    "branches": 82.62
+    "lines": 79.38,
+    "branches": 84.33
   },
-  "scope": "Native unit and HTTP integration tests including local n8n. Real France Travail import and replay recorded separately in france-travail-rectification.json.",
-  "codeCommit": "df3b8f3aea4d9583917b3c658644cf19a2f96709"
+  "scope": "Unit and HTTP integration including private partial correspondence and explicit uncertain-search option. Live France Travail offers compared to synthetic profiles in external-partial-live.json."
 }

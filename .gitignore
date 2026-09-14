@@ -9,3 +9,6 @@ docs/proofs/coverage/
 backups/
 
 .test-build/
+
+# Temporary Word lock files (not document content)
+**/~$*.docx

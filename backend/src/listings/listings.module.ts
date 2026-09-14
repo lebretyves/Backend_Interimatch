@@ -1,3 +1,5 @@
+import { partialOfferMatch } from "../public-data/partial-matching";
+import { professional } from "../profiles/profiles.module";
 import { PageDto } from "../common/page.dto";
 import { Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty } from "@nestjs/swagger";
@@ -39,15 +41,14 @@ class ListingsController {
   constructor(private readonly db: Database) {}
   @ApiOperation({
     description:
-      "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
+      "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT. Authenticated search also adds profileCorrespondence; includeUncertainExternal defaults false and unverifiedSearchFilters identifies filters not satisfied by evidence.",
   })
   @Post("listings/search")
   @UseGuards(SessionGuard)
   async search(@Req() r: Request, @Body() b: SearchDto) {
-    const [p] = await this.db.query(
-      "SELECT qualifications FROM profile WHERE user_id=$1",
-      [user(r)],
-    );
+    const [p] = await this.db.query("SELECT * FROM profile WHERE user_id=$1", [
+      user(r),
+    ]);
     if (!p) throw new NotFoundException();
     if (b.qualifications.some((q) => !p.qualifications.includes(q)))
       throw new BadRequestException("Qualification not held");
@@ -71,11 +72,16 @@ class ListingsController {
       b.shifts?.length ||
       b.establishmentId,
     );
-    const externalWhere = strictUnknown
-      ? "false"
-      : "e.active AND (e.expires_at IS NULL OR e.expires_at>now()) AND e.qualification=ANY(" +
-        bind(externalQualifications) +
-        ")";
+    const externalWhere =
+      strictUnknown && !b.includeUncertainExternal
+        ? "false"
+        : "e.active AND (e.expires_at IS NULL OR e.expires_at>now()) AND e.qualification=ANY(" +
+          bind(
+            b.includeUncertainExternal
+              ? b.qualifications
+              : externalQualifications,
+          ) +
+          ")";
     const sql =
       "SELECT data FROM (SELECT 'm_'||m.id AS listing_id,m.created_at AS listed_at,(to_jsonb(m)-'location')||jsonb_build_object('id','m_'||m.id,'kind','INTERNAL_MISSION','latitude',ST_Y(m.location::geometry),'longitude',ST_X(m.location::geometry),'salary',jsonb_build_object('amount',m.hourly_salary,'currency','EUR','unit','HOUR','gross',true)) AS data FROM mission m WHERE " +
       q.where +
@@ -86,15 +92,72 @@ class ListingsController {
       " OFFSET " +
       bind(b.offset ?? 0);
     const rows = await this.db.query(sql, parameters);
+    const unverifiedSearchFilters = [
+      "start",
+      "end",
+      "radiusKm",
+      "shifts",
+      "establishmentId",
+      "ideServices",
+      "iadePopulation",
+      "iadeBlocks",
+      "iadeSpecialties",
+      "ibodePopulation",
+      "ibodeBlocks",
+      "ibodeSpecialties",
+    ].filter((key) => {
+      const value = (b as any)[key];
+      return Array.isArray(value) ? value.length > 0 : value !== undefined;
+    });
+    const comparedAt = new Date().toISOString();
     return {
       items: rows.map((r) =>
         r.data.kind === "EXTERNAL_OFFER"
-          ? externalPresentation(r.data)
+          ? {
+              ...externalPresentation(r.data),
+              profileCorrespondence: partialOfferMatch(
+                r.data,
+                professional(p),
+                comparedAt,
+              ),
+              unverifiedSearchFilters,
+              requestedFiltersVerified: unverifiedSearchFilters.length === 0,
+            }
           : r.data,
       ),
       limit: b.limit ?? 20,
       offset: b.offset ?? 0,
-      unknownExternalFieldsExcluded: strictUnknown,
+      unknownExternalFieldsExcluded:
+        !b.includeUncertainExternal &&
+        (strictUnknown ||
+          externalQualifications.length !== b.qualifications.length),
+    };
+  }
+  @Get("me/listings/:id/correspondence")
+  @UseGuards(SessionGuard)
+  @ApiOperation({
+    description:
+      "Private partial comparison against the authenticated nurse profile. No full score or verified eligibility. Public listing endpoints never expose profile comparisons.",
+  })
+  async compareExternal(@Req() r: Request, @Param("id") id: string) {
+    if (
+      !/^e_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      )
+    )
+      throw new NotFoundException();
+    const [p] = await this.db.query("SELECT * FROM profile WHERE user_id=$1", [
+      user(r),
+    ]);
+    if (!p) throw new NotFoundException();
+    const [offer] = await this.db.query(
+      "SELECT title,provenance FROM external_offer WHERE id=$1 AND active AND (expires_at IS NULL OR expires_at>now())",
+      [id.slice(2)],
+    );
+    if (!offer) throw new NotFoundException();
+    return {
+      id,
+      profileCorrespondence: partialOfferMatch(offer, professional(p)),
     };
   }
   @ApiOperation({
