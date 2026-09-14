@@ -1,0 +1,53 @@
+import { Controller,Get,Post,Put,Body,Req,Res,Param,Module,Injectable,UseGuards,NotFoundException,BadRequestException,ServiceUnavailableException,ParseUUIDPipe } from '@nestjs/common';
+import {IsIn,IsString,IsBoolean,Equals,Length,Matches} from 'class-validator';
+import { Request,Response } from 'express';
+import { randomUUID } from 'node:crypto';
+import { mkdir,writeFile,readFile,rename } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { Database,audit } from '../database/database';
+import { user,SessionGuard,nurse } from '../common/access';
+import { required } from '../config';
+import { encrypt,decrypt,fileMime } from './crypto';
+class UploadDto{@IsIn(['application/pdf','image/png','image/jpeg']) mime!:string;@IsString() @Length(4,7000000) contentBase64!:string;@Equals(true) fictional!:boolean;}
+class BankDto{@Matches(/^FR\d{12}DEMO\d{8}$/) iban!:string;@Equals(true) fictional!:boolean;}
+@Injectable()
+export class DocumentsService{
+ private readonly directory=resolve(process.cwd(),'../data/documents');
+ constructor(private readonly db:Database){}
+ private key(version=1){if(version!==1)throw new ServiceUnavailableException('Document key version unavailable');return Buffer.from(required('DOCUMENT_KEY'),'base64');}
+ async store(actor:string,kind:string,mime:string,data:Buffer,assignmentId:string|null=null){
+  const id=randomUUID(),encrypted=encrypt(data,this.key(),id);
+  await mkdir(this.directory,{recursive:true});
+  await this.db.query("INSERT INTO document(id,owner_id,assignment_id,kind,mime,status,size_bytes) VALUES($1,$2,$3,$4,$5,'STAGING',$6)",[id,actor,assignmentId,kind,mime,data.length]);
+  await writeFile(resolve(this.directory,id+'.tmp'),encrypted,{flag:'wx',mode:0o600});
+  await rename(resolve(this.directory,id+'.tmp'),resolve(this.directory,id+'.bin'));
+  await this.db.transaction(async em=>{await em.query("UPDATE document SET status='READY' WHERE id=$1",[id]);await audit(em,actor,'DOCUMENT_STORED',id,{kind});});
+  return {id,status:'READY'};
+ }
+ async read(actor:string,id:string){
+  const doc=await this.db.transaction(async em=>{
+   const [d]=await em.query("SELECT * FROM document WHERE id=$1 AND status='READY'",[id]);if(!d)throw new NotFoundException();
+   if(d.owner_id!==actor){
+    if(d.kind!=='CONFIRMATION'||!d.assignment_id)throw new NotFoundException();
+    const allowed=await em.query('SELECT a.id FROM assignment a JOIN mission m ON m.id=a.mission_id WHERE a.id=$1 AND (a.nurse_id=$2 OR EXISTS(SELECT 1 FROM membership o WHERE o.user_id=$2 AND o.active AND o.organization_id IN(m.agency_id,m.establishment_id)))',[d.assignment_id,actor]);if(!allowed.length)throw new NotFoundException();
+   }
+   await audit(em,actor,'DOCUMENT_READ',id);return d;
+  });
+  try{return {mime:doc.mime,data:decrypt(await readFile(resolve(this.directory,id+'.bin')),this.key(doc.key_version),id)};}catch{throw new ServiceUnavailableException('Document unavailable or authentication failed');}
+ }
+}
+@Controller('me') @UseGuards(SessionGuard)
+class DocumentsController{
+ constructor(private readonly db:Database,private readonly documents:DocumentsService){}
+ @Post('documents') async upload(@Req()r:Request,@Body()b:UploadDto){
+  const data=Buffer.from(b.contentBase64,'base64');
+  if(!data.length||data.length>5*1024*1024||fileMime(data)!==b.mime)throw new BadRequestException('Allowed: fictional PDF/JPEG/PNG, maximum 5 MiB, matching signature');
+  await this.db.transaction(async em=>nurse(em,user(r)));return this.documents.store(user(r),'EVIDENCE',b.mime,data);
+ }
+ @Get('documents')list(@Req()r:Request){return this.db.query("SELECT id,kind,mime,size_bytes,status,created_at FROM document WHERE owner_id=$1 AND kind!='BANK' ORDER BY created_at DESC,id LIMIT 50",[user(r)]);}
+ @Get('documents/:id')async download(@Req()r:Request,@Param('id',ParseUUIDPipe)id:string,@Res()res:Response){const d=await this.documents.read(user(r),id);res.set({'Content-Type':d.mime,'Content-Disposition':'attachment; filename="infimatch-'+id+'"','Cache-Control':'no-store'}).send(d.data);}
+ @Put('bank-details')async bank(@Req()r:Request,@Body()b:BankDto){await this.db.transaction(async em=>nurse(em,user(r)));return this.documents.store(user(r),'BANK','application/json',Buffer.from(JSON.stringify({iban:b.iban,fictional:true})));}
+ @Get('bank-details')async getBank(@Req()r:Request){const [d]=await this.db.query("SELECT id FROM document WHERE owner_id=$1 AND kind='BANK' AND status='READY' ORDER BY created_at DESC,id LIMIT 1",[user(r)]);if(!d)return {iban:null};const data=await this.documents.read(user(r),d.id);const b=JSON.parse(data.data.toString());return {iban:'FR** **** **** **** **** **'+b.iban.slice(-4),fictional:true};}
+}
+@Module({controllers:[DocumentsController],providers:[DocumentsService],exports:[DocumentsService]})
+export class DocumentsModule{}
