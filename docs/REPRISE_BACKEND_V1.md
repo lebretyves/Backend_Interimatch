@@ -34,3 +34,6 @@ Bundle Git initial vérifié dans backups/. Dump PostgreSQL restauré dans une b
 
 ## Reprise concrète
 Lire cette note et git status, puis README.md. Vérifier les services ; ne pas recréer les données. Démarrer l'API compilée, n8n et les workflows puis le worker si nécessaire. Utiliser npm run verify. Priorité suivante : compléter la recette et les listes secondaires, vérifier les commandes sensibles et obtenir les accès API. Ne jamais convertir une fixture ou une fonction non vérifiée en fonctionnalité « terminée ».
+
+## Dernier point de code verifie
+Commit 28923fc : 44 tests passent. Bundle restaure dans backups/restore-code-28923fc ; npm ci, typecheck et build reussis dans cette copie. Preuve : docs/proofs/code-recovery.json. Le depot principal et la copie restauree ont des dependances distinctes. Cette verification porte sur le code, pas une restauration complete de toutes les donnees.

@@ -10,3 +10,4 @@
 *.docx binary
 *.txt text eol=lf
 *.csv text eol=lf
+docs/references/** binary
