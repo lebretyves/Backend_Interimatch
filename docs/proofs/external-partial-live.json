@@ -37,7 +37,7 @@
         {
           "sourceId": "213MTBB",
           "url": "https://candidat.francetravail.fr/offres/recherche/detail/213MTBB",
-          "title": "Vacations Infirmiers - SIC - Paris 15ème (H/F)",
+          "title": "Vacations Infirmiers - SIC - Paris 15\u00c3\u00a8me (H/F)",
           "result": "TO_CONFIRM",
           "criteria": {
             "qualification": {
@@ -94,7 +94,7 @@
         {
           "sourceId": "213MSHC",
           "url": "https://candidat.francetravail.fr/offres/recherche/detail/213MSHC",
-          "title": "Infirmier/Infirmière - Autodialyse (H/F) - Vacations - Paris 7ème",
+          "title": "Infirmier/Infirmi\u00c3\u00a8re - Autodialyse (H/F) - Vacations - Paris 7\u00c3\u00a8me",
           "result": "TO_CONFIRM",
           "criteria": {
             "qualification": {
@@ -157,7 +157,7 @@
         {
           "sourceId": "6592779",
           "url": "https://candidat.francetravail.fr/offres/recherche/detail/6592779",
-          "title": "Infirmier / Infirmière anesthésiste (H/F)",
+          "title": "Infirmier / Infirmi\u00c3\u00a8re anesth\u00c3\u00a9siste (H/F)",
           "result": "POSSIBLE_MATCH",
           "criteria": {
             "qualification": {
@@ -210,7 +210,7 @@
         {
           "sourceId": "6592723",
           "url": "https://candidat.francetravail.fr/offres/recherche/detail/6592723",
-          "title": "Infirmier / Infirmière anesthésiste (H/F)",
+          "title": "Infirmier / Infirmi\u00c3\u00a8re anesth\u00c3\u00a9siste (H/F)",
           "result": "POSSIBLE_MATCH",
           "criteria": {
             "qualification": {
@@ -321,5 +321,6 @@
       ]
     }
   ],
-  "scope": "Fresh public France Travail offers compared in memory to three fictional profiles. RPPS FOUND is a fixture only; no real profile or database mutated, no full eligibility or score."
+  "scope": "Fresh public France Travail offers compared in memory to three fictional profiles. RPPS FOUND is a fixture only; no real profile or database mutated, no full eligibility or score.",
+  "codeCommit": "5f9db50b26638a03259d37640d1aea8e24c53e18"
 }
