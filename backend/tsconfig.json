@@ -12,9 +12,9 @@
     "outDir": "dist",
     "resolveJsonModule": true,
     "types": [
-      "node",
-      "jest"
-    ]
+      "node"
+    ],
+    "sourceMap": true
   },
   "include": [
     "src/**/*.ts",

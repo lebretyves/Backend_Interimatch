@@ -1,1 +1,0 @@
-module.exports = { preset: 'ts-jest', testEnvironment: 'node', testMatch: ['**/test/**/*.spec.ts'], collectCoverageFrom: ['src/**/*.ts','!src/main.ts','!src/cli.ts'], coverageDirectory: '../docs/proofs/coverage', testTimeout: 30000 };

@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-14T21:03:12.757Z",
+  "results": [
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run coverage",
+      "exitCode": 0
+    }
+  ]
+}

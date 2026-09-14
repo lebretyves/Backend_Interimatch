@@ -1,6 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 export class InitialSchema1789380000000 implements MigrationInterface {
- async up(q:QueryRunner):Promise<void>{await q.query(`
+  async up(q: QueryRunner): Promise<void> {
+    await q.query(`
  CREATE EXTENSION IF NOT EXISTS postgis;
  CREATE EXTENSION IF NOT EXISTS btree_gist;
  CREATE TABLE account(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text NOT NULL UNIQUE, password_hash text NOT NULL, family text NOT NULL CHECK(family IN('NURSE','ENTERPRISE')), terms_version text NOT NULL, terms_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now());
@@ -35,6 +36,11 @@ export class InitialSchema1789380000000 implements MigrationInterface {
  END $$;
  CREATE CONSTRAINT TRIGGER mission_assignment_consistency AFTER INSERT OR UPDATE ON mission DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_assignment_consistency();
  CREATE CONSTRAINT TRIGGER assignment_mission_consistency AFTER INSERT OR UPDATE ON assignment DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_assignment_consistency();
- `);}
- async down():Promise<void>{throw new Error('Destructive rollback intentionally unavailable; restore a verified backup.');}
+ `);
+  }
+  async down(): Promise<void> {
+    throw new Error(
+      "Destructive rollback intentionally unavailable; restore a verified backup.",
+    );
+  }
 }

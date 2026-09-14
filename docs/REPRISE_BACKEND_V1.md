@@ -1,7 +1,36 @@
-# Reprise InfiMatch
-État initial : création du dossier et copie des références terminées. Implémentation en cours.
-Lire docs/history/DISCUSSION.md et docs/references/Interimatch_Sante_Mega_Prompt_Backend_V1.md.
-Les tests et fonctionnalités non exécutés ne sont pas validés.
-Docker a été démarré. npm utilise le magasin système via NODE_OPTIONS=--use-system-ca.
-Aucune clé RPPS/France Travail disponible pour un appel authentifié réel.
-Le frontend est hors de cette passe backend et reste à développer par l'équipe.
+# Reprise InfiMatch — 14 septembre 2026
+
+## Objectif confirmé
+Construire le backend InfiMatch en conservant 100 % du périmètre V1 validé. « 10 % » a été corrigé par l'utilisateur en « 100 ». Maintenir l'historique et vérifier réellement le code.
+
+## Sources et décisions
+Sources figées dans references/, empreintes dans SOURCE_MANIFEST.json. Nouvelle numérotation du Word. Trois workflows F12. RPPS via API : FOUND seulement satisfait le contrôle, NOT_FOUND bloque, indisponibilité PENDING ; aucune validation manuelle par l'agence. Attestation V2 et références hors V1. Équipe de 4, délai de 11 jours. Ne pas confondre code backend et livrables collectifs.
+
+## État réel
+- Projet créé dans E:/Interimatch/InfiMatch. Premier commit : 2b52e4c. Pour le dernier commit, utiliser git log -1 ; git status doit toujours être relu.
+- Node 24, NestJS 12.0.2, Express, TypeORM sans synchronize, PostgreSQL/PostGIS/btree_gist, MongoDB/Mongoose, n8n 2.38.7. Versions npm verrouillées et images Docker figées par digest.
+- Trois migrations appliquées : InitialSchema1789380000000, Extended1789380100000, Harden1789380200000.
+- Modules : auth, profiles/RPPS, missions/applications/assignments, matching, listings/favorites/dashboards/history, documents/bank, organizations/staffing requests, reference data, public import, automation.
+- API et n8n sont locaux. main écoute 127.0.0.1:3100 ; n8n 127.0.0.1:55678 ; PostgreSQL 55432 ; MongoDB 57017.
+- Seed fictif rejoué : 3 comptes à la première exécution, 0 à la seconde. Mots de passe locaux dans data/, jamais dans Git. RPPS du seed non vérifié.
+- Regarder docs/proofs/verification.json, coverage.txt et integration-final.txt pour les résultats actuels. Les anciennes sorties sont historiques.
+- Tests réels des trois workflows, reçus SQL, notifications sans doublon, confirmation PDF, accès inter-organisations, annulation, MongoDB et chiffrement.
+- Tests de concurrence : affectation unique, exclusion SQL des chevauchements, retour RPPS tardif ignoré, profil incompatible refusé après affectation.
+- Un résultat d'audit npm à zéro concerne npm uniquement ; il ne vaut pas audit global de sécurité.
+
+## Écarts restant à traiter — aucune conformité intégrale revendiquée
+1. **Accès fournisseurs bloqués** : aucune clé ANS/France Travail disponible. Adaptateurs et fixtures testés ; aucun import public authentifié réel, aucun RPPS réel vérifié. Confirmer le contrat et les droits de réutilisation sur le compte fournisseur puis conserver un manifeste réel.
+2. **Recette V1 complémentaire** : tous les endpoints ne sont pas couverts. Finaliser les cas de panne MongoDB, relance du worker après crash, génération PDF concurrente expirant sa réservation, rotation effective des clés et réconciliation des documents STAGING.
+3. **Écarts d'implémentation à corriger avant recette intégrale** : pagination encore limitée sur plusieurs listes ; recommandations limitées aux 50 premières missions/candidats, notifications d'ouverture aux 200 premiers profils ; étendre par lots avec tri global. Contrat commun de recherche des offres externes à compléter (leur lecture et favoris sont distincts). Matching utilise une distance sphérique, recherche PostGIS géodésique : harmoniser et tester les limites de rayon. Rétention MongoDB actuellement fixée à 30 jours. Protocole de retries de sérialisation, idempotence des autres commandes sensibles et schémas OpenAPI de sortie à compléter.
+4. **Déploiement** : HTTPS et TLS interservices, comptes de bases au moindre privilège, analyse des images, conservation/purge globale et restauration complète MongoDB/fichiers/clés/n8n non validés. Ne pas qualifier le Compose local de production.
+5. **Métier/livrables** : confirmer le scénario juridique précis et ses éventuels contrôles d'expérience obligatoire avec les sources applicables ; les mois du score ne sont pas une preuve légale. Frontend, accessibilité, SEO, marché, CDC, pitch et travail collectif ne sont pas réalisés par ce backend.
+6. Les comptes et enregistrements synthétiques des tests restent dans les bases locales. Préparer un environnement de recette isolé et une purge contrôlée avant multiplication des tests.
+
+## Incidents résolus
+npm nécessitait NODE_OPTIONS=--use-system-ca, sans désactiver TLS. NestJS 11/Multer présentait des alertes ; NestJS 12 est retenu avec tests natifs Node, Jest a été retiré. Initialisation des index MongoDB corrigée. TypeORM UPDATE RETURNING retourne parfois [lignes, nombre] : normalisation centralisée dans Database. Une erreur SQL sur le mot réservé window a été corrigée par window_key avant application de la migration. Les exports n8n désactivent désormais la conservation des corps/en-têtes des exécutions.
+
+## Sauvegardes
+Bundle Git initial vérifié dans backups/. Dump PostgreSQL restauré dans une base distincte infimatch_restore_20260914 : 39 comptes, 8 missions, 5 affectations au moment du test, PostGIS 3.5.2 et zéro mission FILLED incohérente. Les ajouts ultérieurs ne figurent pas dans ce premier dump. Les clés ne sont pas incluses dans Git. Les preuves n8n ne contiennent que IDs, statuts et dates.
+
+## Reprise concrète
+Lire cette note et git status, puis README.md. Vérifier les services ; ne pas recréer les données. Démarrer l'API compilée, n8n et les workflows puis le worker si nécessaire. Utiliser npm run verify. Priorité suivante : corriger les écarts de lots/recherche, compléter les tests manquants et obtenir les accès API. Ne jamais convertir une fixture ou une fonction non vérifiée en fonctionnalité « terminée ».

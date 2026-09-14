@@ -1,0 +1,102 @@
+
+> infimatch@0.1.0 coverage
+> npm run coverage -w backend
+
+
+> @infimatch/backend@0.1.0 coverage
+> npm run test:compile && c8 --reporter=text --reporter=json-summary --reporter=html --reports-dir=../docs/proofs/coverage node --test ".test-build/test/unit/*.spec.js" ".test-build/test/integration/*.spec.js"
+
+
+> @infimatch/backend@0.1.0 test:compile
+> tsc --outDir .test-build
+
+✔ full internal journey and concurrency, with isolated fixture RPPS (2621.387ms)
+✔ CSRF required before registration (10.1595ms)
+✔ a late RPPS answer cannot overwrite a newer number (222.1786ms)
+✔ PostgreSQL exclusion is a backstop against overlapping active assignments (14.7875ms)
+✔ authenticated encryption rejects tampering and swapped documents (2.8437ms)
+✔ encryption uses independent nonces (0.3137ms)
+✔ HTML is not accepted as PDF (0.1716ms)
+✔ IDE OR IADE filters stay in their branch and all values are bound (0.6199ms)
+✔ unselected branch filter rejected (0.3476ms)
+✔ incomplete location rejected (0.152ms)
+✔ night requires full availability including next day (13.7036ms)
+✔ adjacent intervals merge but gaps do not (0.754ms)
+✔ RPPS NOT_FOUND cannot be offset by score (0.7282ms)
+✔ RPPS PENDING cannot be offset by score (0.3856ms)
+✔ RPPS NOT_CHECKED cannot be offset by score (0.3926ms)
+✔ no IADE to IBODE equivalence (0.2772ms)
+✔ mixed population requires both competencies (0.2121ms)
+✔ unknown location is not zero distance (0.306ms)
+✔ consecutive assignments do not overlap (0.3712ms)
+✔ overlapping experience counted once (0.9522ms)
+✔ timezone required and interval positive (0.8047ms)
+✔ public offer cleanup retains provenance and no invented dates (3.8335ms)
+✔ permanent contract rejected from interim import (0.818ms)
+✔ unknown qualification stays unknown (0.3407ms)
+✔ IBODE does not become IADE (0.2994ms)
+✔ missing provider access cannot report an acquisition (0.6302ms)
+✔ missing credentials is pending (1.8856ms)
+✔ zero exact results is not found (15.3861ms)
+✔ exact RPPS found (0.5682ms)
+✔ HTTP 401 remains pending (0.3026ms)
+✔ HTTP 403 remains pending (0.1823ms)
+✔ HTTP 404 remains pending (0.1319ms)
+✔ HTTP 429 remains pending (0.2485ms)
+✔ HTTP 500 remains pending (0.1783ms)
+✔ HTTP 503 remains pending (0.2503ms)
+✔ malformed results cannot prove absence (0.3686ms)
+✔ a different practitioner does not count as found (0.3045ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14499.3885
+---------------------------|---------|----------|---------|---------|-------------------------------
+File                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s             
+---------------------------|---------|----------|---------|---------|-------------------------------
+All files                  |   69.31 |    78.95 |   75.38 |   69.31 |                               
+ src                       |   68.93 |    65.62 |   66.66 |   68.93 |                               
+  app.ts                   |   96.21 |    81.81 |   66.66 |   96.21 | 37-39,67,179-181              
+  cli.ts                   |       0 |        0 |       0 |       0 | 1-88                          
+  config.ts                |   97.22 |    33.33 |     100 |   97.22 | 33                            
+ src/auth                  |   93.63 |    86.66 |     100 |   93.63 |                               
+  auth.module.ts           |   93.63 |    86.66 |     100 |   93.63 | 135-140,149-156               
+ src/automation            |   16.02 |      100 |   33.33 |   16.02 |                               
+  automation.module.ts     |   16.02 |      100 |   33.33 |   16.02 | ...11,313-318,320-322,324-329 
+ src/common                |     100 |    88.88 |     100 |     100 |                               
+  access.ts                |     100 |    88.88 |     100 |     100 | 46                            
+ src/database              |   59.25 |      100 |    64.7 |   59.25 |                               
+  database.ts              |     100 |      100 |     100 |     100 |                               
+  extended.ts              |   27.77 |      100 |       0 |   27.77 | 4-12,14-17                    
+  harden.ts                |   29.41 |      100 |       0 |   29.41 | 4-13,15-16                    
+  schema.ts                |   10.86 |      100 |       0 |   10.86 | 4-40,42-45                    
+ src/demo                  |       0 |        0 |       0 |       0 |                               
+  seed.ts                  |       0 |        0 |       0 |       0 | 1-114                         
+ src/documents             |   95.81 |       75 |   95.45 |   95.81 |                               
+  crypto.ts                |     100 |       50 |     100 |     100 | 3,21,34-36                    
+  documents.module.ts      |   95.11 |       80 |   94.73 |   95.11 | 145-148,166-167,172-176       
+ src/domain                |   99.37 |    87.27 |     100 |   99.37 |                               
+  matching.ts              |   99.37 |    87.27 |     100 |   99.37 | 143                           
+ src/listings              |   69.44 |    77.04 |   52.77 |   69.44 |                               
+  listings.module.ts       |   42.28 |       70 |   31.25 |   42.28 | ...51,155-179,181-187,189-198 
+  search.ts                |   93.07 |    78.43 |      70 |   93.07 | 177-180,191-201,205           
+ src/matching              |   76.14 |    73.91 |   83.33 |   76.14 |                               
+  matching.module.ts       |   76.14 |    73.91 |   83.33 |   76.14 | 78-84,113-145,155-156,180-184 
+ src/missions              |   77.48 |    77.55 |    84.9 |   77.48 |                               
+  mission.dto.ts           |     100 |      100 |     100 |     100 |                               
+  missions.module.ts       |   68.11 |      100 |      65 |   68.11 | ...97,107-111,113-118,120-131 
+  missions.service.ts      |   74.55 |    66.15 |    92.3 |   74.55 | ...98,304-306,309-314,320-321 
+ src/organizations         |   51.06 |    72.22 |   63.15 |   51.06 |                               
+  organizations.module.ts  |   51.06 |    72.22 |   63.15 |   51.06 | ...-91,93-102,104-108,110-121 
+ src/profiles              |   93.23 |    85.71 |   74.28 |   93.23 |                               
+  profiles.module.ts       |   92.48 |    81.57 |   73.33 |   92.48 | ...76,244-245,250-251,253-259 
+  rpps.ts                  |    95.5 |       92 |      80 |    95.5 | 55-56,62-63                   
+ src/public-data           |   46.83 |    57.69 |      75 |   46.83 |                               
+  offers.ts                |   46.83 |    57.69 |      75 |   46.83 | 72-108,111-112,114-158        
+ src/reference-data        |    70.1 |      100 |       0 |    70.1 |                               
+  reference-data.module.ts |    70.1 |      100 |       0 |    70.1 | 66-94                         
+---------------------------|---------|----------|---------|---------|-------------------------------

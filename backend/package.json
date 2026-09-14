@@ -5,14 +5,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsc-watch --project tsconfig.build.json --onSuccess \"node dist/main.js\"",
     "start": "node dist/main.js",
     "db:migrate": "tsx src/cli.ts migrate",
     "seed": "tsx src/cli.ts seed",
     "test": "npm run test:compile && node --test \".test-build/test/unit/*.spec.js\"",
     "test:integration": "npm run test:compile && node --test \".test-build/test/integration/*.spec.js\"",
     "coverage": "npm run test:compile && c8 --reporter=text --reporter=json-summary --reporter=html --reports-dir=../docs/proofs/coverage node --test \".test-build/test/unit/*.spec.js\" \".test-build/test/integration/*.spec.js\"",
-    "test:compile": "tsc --outDir .test-build"
+    "test:compile": "tsc --outDir .test-build",
+    "worker": "node dist/worker.js",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
   },
   "engines": {
     "node": ">=24 <25"
@@ -44,7 +46,6 @@
     "@types/connect-pg-simple": "7.0.3",
     "@types/express": "5.0.6",
     "@types/express-session": "1.19.0",
-    "@types/jest": "29.5.14",
     "@types/luxon": "3.7.5",
     "@types/node": "24.13.4",
     "@types/pdfkit": "0.17.6",
@@ -52,9 +53,9 @@
     "@types/supertest": "7.2.1",
     "c8": "12.0.0",
     "expect": "30.5.1",
-    "jest": "29.7.0",
+    "prettier": "3.9.6",
     "supertest": "7.2.2",
-    "ts-jest": "29.4.12",
+    "tsc-watch": "7.2.1",
     "tsx": "4.23.13",
     "typescript": "5.9.3"
   }
