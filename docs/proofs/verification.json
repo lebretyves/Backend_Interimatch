@@ -19,5 +19,6 @@
     "lines": 77.94,
     "branches": 82.62
   },
-  "scope": "Native unit and HTTP integration tests including local n8n. Real France Travail import and replay recorded separately in france-travail-rectification.json."
+  "scope": "Native unit and HTTP integration tests including local n8n. Real France Travail import and replay recorded separately in france-travail-rectification.json.",
+  "codeCommit": "df3b8f3aea4d9583917b3c658644cf19a2f96709"
 }

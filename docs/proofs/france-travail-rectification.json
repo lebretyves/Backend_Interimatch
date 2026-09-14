@@ -194,5 +194,6 @@
     "6385401",
     "5778620"
   ],
-  "scope": "Bounded 150 per keyword, Paris commune checked locally; SQL upsert replay and current HTTP presentation. No full external eligibility verified."
+  "scope": "Bounded 150 per keyword, Paris commune checked locally; SQL upsert replay and current HTTP presentation. No full external eligibility verified.",
+  "codeCommit": "df3b8f3aea4d9583917b3c658644cf19a2f96709"
 }
