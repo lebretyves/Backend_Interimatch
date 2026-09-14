@@ -161,3 +161,9 @@ flowchart LR
 ```
 
 Les donnees d'identite sans coordonnees restent consultables. Ce flux ne modifie ni les droits des organisations ni les lieux des missions. Voir [l'acquisition reelle](ACQUISITION_REELLE.md).
+
+## Corrections de la recette du 15 septembre 2026
+
+Les commandes mission, candidature et creation de besoin suivent : droits actuels -> controle Idempotency-Key/contenu -> lecture du recu ou mutation -> recu dans la meme transaction. Le classement ne contient plus de dossiers ineligibles. Une confirmation reste READY apres cloture normale ; annulation et cloture restent distinctes.
+
+Apres cinq echecs de distribution : EXHAUSTED -> commande operateur retry-outbox -> evenement remis en attente, sauf reservation active. La reprise est auditee. Voir le [bilan](RECETTE_BACKEND_V1.md).

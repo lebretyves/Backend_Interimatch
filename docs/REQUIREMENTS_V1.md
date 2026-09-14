@@ -18,14 +18,14 @@ La nouvelle numérotation du [catalogue Word](references/Interimatch_Sante_Catal
 | F03 | Données du tableau de bord infirmier : propositions, favoris, disponibilités et profil | listings, matching, profiles | Partiel ; écrans et états vides/erreurs à intégrer |
 | F04 + F16 | Un seul matching déterministe : admissibilité avant score, explication versionnée, aucune affectation automatique | domain/matching, matching, database/distance | Testé sur scénarios ; score 93,75, intervalles, qualification, concurrence, traces Mongo ; recette globale restante |
 | F05 | Recherche multi-qualifications ; OU entre branches et filtres propres à chaque branche ; dates et distance | listings/search, listings | Partiel ; branche IDE/IADE et champs inconnus externes testés |
-| F06 | Favoris privés d'offres internes, externes et d'établissements ; ajout/retrait, absence de doublon, expiration visible | listings | Partiel ; offre externe expirée testée, listes secondaires à compléter |
+| F06 | Favoris privés d'offres internes, externes et d'établissements ; ajout/retrait, absence de doublon, expiration visible | listings | Partiel ; offre externe expirée testée, listes secondaires paginées et testées |
 | F07 | Candidature interne suivie et retirable ; consentement à jour ; candidature externe par redirection | missions, listings | Partiel ; parcours interne testé, recette exhaustive des transitions restante |
 | F08 | Disponibilités et indisponibilités couvrant tout le créneau ; mobilité compatible | profiles, domain | Testé sur scénarios ; nuits, intervalles adjacents, trous et conflits |
 | F09 | Historique et calendrier des affectations, état métier distinct de la position temporelle | listings, missions | Partiel ; annulation et clôture testées, calendrier frontend restant |
-| F12 | Trois workflows n8n : notification de match, relance, confirmation PDF fictive après affectation humaine | automation, workflows | Trois workflows exécutés ; reprises après crash/expiration concurrente à compléter |
+| F12 | Trois workflows n8n : notification de match, relance, confirmation PDF fictive après affectation humaine | automation, workflows | Trois workflows exécutés ; réservations abandonnées/expirées et concurrence PDF testées |
 | F15 | Acquisition publique réelle, nettoyage, provenance, dédoublonnage et import rejouable | public-data/offers, cli | Partiel ; accès réel, persistance et rejeu vérifiés dans proofs/france-travail-live.json |
 | F17 | Créer, modifier, publier, annuler, rouvrir et clôturer une mission selon droits et états | missions | Partiel ; transitions critiques testées ; recette complète des commandes restante |
-| F18 | RPPS exact FOUND satisfait le contrôle ; NOT_FOUND bloque ; panne PENDING ; retour tardif ignoré | profiles/rpps | Partiel ; accès ANS réel et cas NOT_FOUND testés, cas FOUND réel restant |
+| F18 | RPPS exact FOUND satisfait le contrôle ; NOT_FOUND bloque ; panne PENDING ; retour tardif ignoré | profiles/rpps | Partiel ; accès ANS réel et cas NOT_FOUND testés, cas FOUND réel testé sans modification de profil |
 | F19 | Tableau agence, candidats, sélection/refus puis affectation humaine atomique | missions, matching, listings | Partiel ; affectation, idempotence et exclusion SQL testées ; intégration écran restante |
 | F20 | Données publiques nettoyées visibles avec provenance et exemple avant/après | public-data, listings | Partiel ; import réel vérifié, affichage frontend restant |
 | F22 | Justificatif fictif contrôlé, chiffré au repos, téléchargement réservé aux personnes autorisées | documents | Testé sur scénarios ; altération, rotation de clé et reprise STAGING ; restauration complète restante |
@@ -37,7 +37,7 @@ Les chemins du tableau sont relatifs à [backend/src](../backend/src), sauf [wor
 | Sujet | Réalisation et preuve | Reste à valider |
 |---|---|---|
 | Backend TypeScript, relationnel et NoSQL — R28 à R30 | NestJS compilé ; PostgreSQL/PostGIS et MongoDB utilisés dans la recette | Déploiement distant |
-| Tests et couverture — R31, R32 | [48 tests et commandes réussies](proofs/verification.json), [couverture](proofs/coverage.txt), [rapport exportable](proofs/coverage-report.zip) | Endpoints non couverts, crashes et concurrence PDF |
+| Tests et couverture — R31, R32 | [56 tests et commandes réussies](proofs/verification.json), [couverture](proofs/coverage.txt), [rapport exportable](proofs/coverage-report.zip) | Endpoints non couverts, crashes et concurrence PDF |
 | Authentification et autorisation — R09, R10, R34, SEC01 à SEC09 | Sessions PostgreSQL, Argon2id, Origin/CSRF, DTO stricts, droits organisationnels ; [tests HTTP](../backend/test/integration/journey.spec.ts) | Recette exhaustive et protections côté navigateur |
 | Données sensibles — R11, SEC10 à SEC12 | AES-256-GCM, fichiers privés, clés versionnées ; tests d'altération et rotation | HTTPS/TLS interservices et exploitation des clés |
 | Automatisation — R19, SEC13 à SEC15 | Trois exports, événements après commit, reçu final et déduplication | Crash/reprise et périmètre complet des accès de service |
@@ -47,7 +47,7 @@ Les chemins du tableau sont relatifs à [backend/src](../backend/src), sauf [wor
 | Frontend et soutenance — autres exigences R | Documents de cadrage disponibles | Frontend TypeScript, responsive, accessibilité, SEO, marché, CDC, pitch et participation collective |
 | Conservation et cadre métier — R21 à R24 | Rétention des explications configurable ; décisions documentées | Purge globale, mentions et vérification du scénario juridique applicable |
 
-La couverture de lignes est **68,52 %**, celle des branches **80,12 %**, sur le processus instrumenté. L'API appelée par n8n tourne séparément et n'entre pas dans ce calcul. Les résultats datent de la dernière vérification du code ; la recette a été relancée après l’intégration FINESS.
+La couverture de lignes est **75,99 %**, celle des branches **81,08 %**, sur le processus instrumenté. L'API appelée par n8n tourne séparément et n'entre pas dans ce calcul. Les résultats datent de la dernière vérification du code ; la recette a été relancée après l’intégration FINESS.
 
 ## Limites de version
 
@@ -71,18 +71,6 @@ Les dépendances logicielles sont dans [package.json](../package.json), [backend
 
 Les preuves historiques conservent leur date et leur portée. Une fonction non testée ne doit jamais être marquée validée par simple présence de code.
 
-## Actualisation des acces fournisseurs
+## Recette du 15 septembre 2026
 
-France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
-
-## Etat confirme le 15 septembre 2026
-
-48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
-
-Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
-
-## Acces ANS/FHIR verifie le 15 septembre 2026
-
-La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
-
-Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.
+Le [bilan actuel](RECETTE_BACKEND_V1.md) detaille les corrections, les preuves et les manques restants. Pagination secondaire et idempotence mission/candidature/besoin realisees ; idempotence documentaire, contrats de sortie complexes, deploiement et restauration complete restent a terminer.

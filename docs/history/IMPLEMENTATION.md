@@ -49,3 +49,7 @@ Acces France Travail reel teste. Source FINESS fournie puis snapshot officiel te
 La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
 
 Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.
+
+## Revue et recette V1 du 15 septembre 2026
+
+Demande utilisateur : retester, identifier les manques et corriger. Baseline 48 tests ; apres corrections 56 tests, 75,99 % lignes et 81,08 % branches. Correction de la pagination, des commandes metier rejouables, du classement admissible, de la confirmation apres cloture, du cache prive et de la reprise outbox. Tests ajoutes pour les reprises et conflits de reservation PDF. Cas RPPS FOUND reel confirme, sans profil reel modifie. Bilan detaille : docs/RECETTE_BACKEND_V1.md. Le client doit fournir Idempotency-Key sur les commandes documentees.

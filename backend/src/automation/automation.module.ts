@@ -47,7 +47,11 @@ export class AutomationService {
       );
       if (receipt.length) return { status: "ALREADY_PROCESSED" };
       let count = 0;
-      if (m.status === "OPEN" && m.version === e.payload.version) {
+      if (
+        m.status === "OPEN" &&
+        m.version === e.payload.version &&
+        new Date(m.start_at).getTime() > Date.now()
+      ) {
         let cursor = "00000000-0000-0000-0000-000000000000";
         while (true) {
           const profiles = await em.query(
@@ -113,7 +117,7 @@ export class AutomationService {
           );
           for (const actor of members) {
             await em.query(
-              "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'REMINDER','Une mission reste à pourvoir.') ON CONFLICT DO NOTHING",
+              "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'REMINDER','Une mission reste ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  pourvoir.') ON CONFLICT DO NOTHING",
               [actor.user_id, e.id],
             );
             count++;
@@ -156,8 +160,10 @@ export class AutomationService {
         [a.id, e.payload.version],
       );
       if (
-        a.status !== "ACTIVE" ||
-        m.status !== "FILLED" ||
+        !(
+          (a.status === "ACTIVE" && m.status === "FILLED") ||
+          (a.status === "COMPLETED" && m.status === "COMPLETED")
+        ) ||
         m.version !== e.payload.version
       ) {
         await em.query(
@@ -228,8 +234,9 @@ export class AutomationService {
         if (reserved.lease_token !== c.lease_token)
           throw new ConflictException("Confirmation lease superseded");
         const status =
-          assignment.status === "ACTIVE" &&
-          current.status === "FILLED" &&
+          ((assignment.status === "ACTIVE" && current.status === "FILLED") ||
+            (assignment.status === "COMPLETED" &&
+              current.status === "COMPLETED")) &&
           current.version === m.version
             ? "READY"
             : "CANCELLED";
@@ -263,11 +270,15 @@ export class AutomationService {
       throw e;
     }
   }
-  async dispatch(limit = 20) {
+  async dispatch(
+    limit = 20,
+    transport: typeof fetch = fetch,
+    eventId: string | null = null,
+  ) {
     const events = await this.db.transaction(async (em) => {
       const rows = await em.query(
-        "SELECT * FROM outbox WHERE event IN('MissionOPEN','MatchRequested','AssignmentCreated') AND completed_at IS NULL AND attempts<5 AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY created_at,id LIMIT $1 FOR UPDATE SKIP LOCKED",
-        [limit],
+        "SELECT * FROM outbox WHERE event IN('MissionOPEN','MatchRequested','AssignmentCreated') AND ($2::uuid IS NULL OR id=$2) AND completed_at IS NULL AND attempts<5 AND available_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY created_at,id LIMIT $1 FOR UPDATE SKIP LOCKED",
+        [limit, eventId],
       );
       for (const row of rows) {
         row.token = randomUUID();
@@ -283,7 +294,7 @@ export class AutomationService {
       const action =
         e.event === "AssignmentCreated" ? "confirmation" : "matches";
       try {
-        const response = await fetch(
+        const response = await transport(
           required("N8N_WEBHOOK_BASE") + "/" + action,
           {
             method: "POST",
@@ -310,7 +321,10 @@ export class AutomationService {
           "UPDATE outbox SET lease_until=NULL,available_at=now()+interval '30 seconds'*power(2,attempts-1),last_error='DELIVERY_OR_RECEIPT_FAILED' WHERE id=$1 AND lease_token=$2",
           [e.id, e.token],
         );
-        results.push({ id: e.id, status: "RETRY_PENDING" });
+        results.push({
+          id: e.id,
+          status: e.attempts + 1 >= 5 ? "EXHAUSTED" : "RETRY_PENDING",
+        });
       }
     }
     return results;
@@ -354,3 +368,34 @@ class AutomationController {
   exports: [AutomationService],
 })
 export class AutomationModule {}
+
+export async function retryOutbox(db: Database, id: string) {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  )
+    throw new Error("Invalid event UUID");
+  return db.transaction(async (em) => {
+    const [row] = await em.query(
+      "SELECT * FROM outbox WHERE id=$1 FOR UPDATE",
+      [id],
+    );
+    if (
+      !row ||
+      !["MissionOPEN", "MatchRequested", "AssignmentCreated"].includes(
+        row.event,
+      )
+    )
+      throw new Error("Retryable event not found");
+    if (row.completed_at) return { id, status: "ALREADY_COMPLETED" };
+    if (row.lease_until && new Date(row.lease_until).getTime() > Date.now())
+      throw new Error("Event still reserved by worker");
+    await em.query(
+      "UPDATE outbox SET attempts=0,available_at=now(),lease_until=NULL,lease_token=NULL,last_error=NULL WHERE id=$1",
+      [id],
+    );
+    await audit(em, null, "OUTBOX_REQUEUED", id, {
+      previousAttempts: row.attempts,
+    });
+    return { id, status: "QUEUED" };
+  });
+}

@@ -1,59 +1,47 @@
-# Reprise InfiMatch — 14 septembre 2026
+# Reprise InfiMatch — 15 septembre 2026
 
-## Objectif confirmé
-Construire le backend InfiMatch en conservant 100 % du périmètre V1 validé. « 10 % » a été corrigé par l'utilisateur en « 100 ». Maintenir l'historique et vérifier réellement le code.
+## État actuel
 
-## Sources et décisions
-Sources figées dans references/, empreintes dans SOURCE_MANIFEST.json. Nouvelle numérotation du Word. Trois workflows F12. RPPS via API : FOUND seulement satisfait le contrôle, NOT_FOUND bloque, indisponibilité PENDING ; aucune validation manuelle par l'agence. Attestation V2 et références hors V1. Équipe de 4, délai de 11 jours. Ne pas confondre code backend et livrables collectifs.
+Le backend a été relu contre le prompt V1 puis retesté : **56 tests réussis**, compilation et typecheck réussis, couverture lignes 75,99 %, branches 81,08 %. Lire [le bilan complet](RECETTE_BACKEND_V1.md) avant de déclarer une fonctionnalité validée.
 
-## État réel
-- Projet créé dans E:/Interimatch/InfiMatch. Premier commit : 2b52e4c ; point de réalisation intermédiaire : e0defee. Pour le dernier commit, utiliser git log -1 ; git status doit toujours être relu.
-- Node 24, NestJS 12.0.2, Express, TypeORM sans synchronize, PostgreSQL/PostGIS/btree_gist, MongoDB/Mongoose, n8n 2.38.7. Versions npm verrouillées et images Docker figées par digest.
-- Quatre migrations appliquées : InitialSchema1789380000000, Extended1789380100000, Harden1789380200000, Finess1789380300000.
-- Modules : auth, profiles/RPPS, missions/applications/assignments, matching, listings/favorites/dashboards/history, documents/bank, organizations/staffing requests, reference data, public import, automation.
-- API et n8n sont locaux. main écoute 127.0.0.1:3100 ; n8n 127.0.0.1:55678 ; PostgreSQL 55432 ; MongoDB 57017.
-- Seed fictif rejoué : 3 comptes à la première exécution, 0 à la seconde. Mots de passe locaux dans data/, jamais dans Git. RPPS du seed non vérifié.
-- Dernière passe complète : 48 tests réussis, 68,52 % des lignes et 80,12 % des branches du processus instrumenté. Regarder docs/proofs/verification.json et coverage.txt pour les résultats actuels. Les anciennes sorties sont historiques.
-- Tests réels des trois workflows, reçus SQL, notifications sans doublon, confirmation PDF, accès inter-organisations, annulation, MongoDB et chiffrement.
-- Tests de concurrence : affectation unique, exclusion SQL des chevauchements, retour RPPS tardif ignoré, profil incompatible refusé après affectation.
-- Un résultat d'audit npm à zéro concerne npm uniquement ; il ne vaut pas audit global de sécurité.
+Sources figées et quatre empreintes contrôlées ; nouvelle numérotation du Word. Objectif 100 % de la V1, équipe de quatre et délai de onze jours. Aucun retrait de périmètre.
 
-## Écarts restant à traiter — aucune conformité intégrale revendiquée
-1. **Accès fournisseurs bloqués** : ANS/RPPS non vérifié en réel. France Travail et FINESS sont désormais importés réellement, voir ACQUISITION_REELLE.md. Confirmer le contrat et les droits de réutilisation sur le compte fournisseur puis conserver un manifeste réel.
-2. **Recette V1 complémentaire** : tous les endpoints ne sont pas couverts. Panne MongoDB, expiration/obsolescence des traces, rotation effective des clés et récupération STAGING sont désormais testées. Restent notamment la relance du worker après crash et la génération PDF concurrente expirant sa réservation.
-3. **Écarts d'implémentation à corriger avant recette intégrale** : pagination encore limitée sur certaines listes secondaires ; idempotence des autres commandes sensibles et schémas OpenAPI de sortie à compléter. Recommandations/candidats maintenant classés globalement par lots et paginés ; notifications et relances traitées par lots. Recherche interne/externe commune ajoutée avec exclusion des champs inconnus pour les filtres stricts. Distance PostGIS commune aux décisions ; pondérations configurables et versionnées par empreinte, rétention configurable. Reprises SQL bornées à trois tentatives et testées.
-4. **Déploiement** : HTTPS et TLS interservices, comptes de bases au moindre privilège, analyse des images, conservation/purge globale et restauration complète MongoDB/fichiers/clés/n8n non validés. Ne pas qualifier le Compose local de production.
-5. **Métier/livrables** : confirmer le scénario juridique précis et ses éventuels contrôles d'expérience obligatoire avec les sources applicables ; les mois du score ne sont pas une preuve légale. Frontend, accessibilité, SEO, marché, CDC, pitch et travail collectif ne sont pas réalisés par ce backend.
-6. Les comptes et enregistrements synthétiques des tests restent dans les bases locales. Préparer un environnement de recette isolé et une purge contrôlée avant multiplication des tests.
+Node 24, NestJS 12/Express, PostgreSQL/PostGIS/btree_gist, MongoDB, n8n local et fichiers privés chiffrés. Quatre migrations appliquées, dont Finess1789380300000. API locale sur 3100 ; n8n 55678 ; PostgreSQL 55432 ; MongoDB 57017.
 
-## Incidents résolus
-npm nécessitait NODE_OPTIONS=--use-system-ca, sans désactiver TLS. NestJS 11/Multer présentait des alertes ; NestJS 12 est retenu avec tests natifs Node, Jest a été retiré. Initialisation des index MongoDB corrigée. TypeORM UPDATE RETURNING retourne parfois [lignes, nombre] : normalisation centralisée dans Database. Une erreur SQL sur le mot réservé window a été corrigée par window_key avant application de la migration. Les exports n8n désactivent désormais la conservation des corps/en-têtes des exécutions.
+## Fournisseurs et référentiel
 
-## Sauvegardes
-Bundle Git initial vérifié dans backups/. Dump PostgreSQL restauré dans une base distincte infimatch_restore_20260914 : 39 comptes, 8 missions, 5 affectations au moment du test, PostGIS 3.5.2 et zéro mission FILLED incohérente. Les ajouts ultérieurs ne figurent pas dans ce premier dump. Les clés ne sont pas incluses dans Git. Les preuves n8n ne contiennent que IDs, statuts et dates.
+France Travail : authentification et import réel de 50 offres du lot vérifiés, avec provenance et rejeu sans doublons. FINESS : snapshot officiel daté du 1er septembre 2026, 174 621 EGE dont 104 752 actifs ; 120 663 paires géographiques exploitables. Les entrées sans coordonnées restent consultables.
 
-## Reprise concrète
-Lire cette note et git status, puis README.md. Vérifier les services ; ne pas recréer les données. Démarrer l'API compilée, n8n et les workflows puis le worker si nécessaire. Utiliser npm run verify. Priorité suivante : compléter la recette et les listes secondaires, vérifier les commandes sensibles et obtenir les accès API. Ne jamais convertir une fixture ou une fonction non vérifiée en fonctionnalité « terminée ».
+ANS/FHIR : accès réel et cas NOT_FOUND puis FOUND vérifiés. Le cas positif utilise un identifiant public retourné par le fournisseur ; aucune identité en clair conservée dans la preuve, aucun profil réel modifié. Les statuts serveur restent FOUND/NOT_FOUND/PENDING/NOT_CHECKED ; aucune validation manuelle RPPS par l'agence.
 
-## Dernier point de code verifie
-Commit 28923fc : 44 tests passent. Bundle restaure dans backups/restore-code-28923fc ; npm ci, typecheck et build reussis dans cette copie. Preuve : docs/proofs/code-recovery.json. Le depot principal et la copie restauree ont des dependances distinctes. Cette verification porte sur le code, pas une restauration complete de toutes les donnees.
+## Corrections de la dernière recette
 
-## Synchronisation documentaire du 14 septembre 2026
+Pagination des listes secondaires ; classement limité aux admissibles ; commandes mission/candidature/besoin idempotentes avec clé obligatoire ; droits revérifiés sur rejeu ; confirmation conservée après clôture ; événement de recalcul après révision ; cache privé no-store ; confirmations non publiées masquées dans les listes ; EXHAUSTED et CLI retry-outbox ; contrats OpenAPI principaux complétés.
 
-README et REQUIREMENTS_V1.md relient les exigences, preuves, architecture et flux. Le plan décrit maintenant les fichiers présents. Les archives sources et le code restent inchangés ; les 44 tests renvoient au commit 28923fc. Les limites de recette, fournisseurs et production sont conservées.
+Les tests couvrent la réservation outbox expirée, l'absence de reçu final malgré HTTP 200, le rejeu concurrent d'une création, la révocation de droits et le remplacement d'une réservation PDF expirée. L'affectation reste une décision humaine de l'agence.
 
-## Actualisation des acces fournisseurs
+## Travail restant
 
-France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
+1. Idempotence complète des dépôts documentaires/remplacements bancaires et purge des fichiers orphelins.
+2. Compléter les réponses complexes OpenAPI et la recette de tous les endpoints.
+3. Raffraîchissement complet des offres externes et cycle de retrait fournisseur.
+4. Frontend et intégration des parcours, y compris recherche FINESS.
+5. Déploiement TLS, privilèges des bases, audit des images, conservation/purge globale et restauration commune SQL/Mongo/fichiers/clés/n8n.
+6. n8n Cloud reste non connecté ; les preuves concernent le local.
+7. Livrables collectifs et validation du scénario métier.
 
-## Etat confirme le 15 septembre 2026
+Ne pas présenter la couverture ou les tests comme une conformité intégrale.
 
-48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
+## Reprendre le travail
 
-Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
+Lire git status, le README, le bilan et la matrice. Ne pas recréer les données. Démarrer l'API compilée, n8n avec les workflows publiés et le worker si nécessaire. Les commandes métier requièrent désormais Idempotency-Key ; conserver cette clé pour un rejeu réseau.
 
-## Acces ANS/FHIR verifie le 15 septembre 2026
+Un événement épuisé peut être repris explicitement avec `node backend/dist/cli.js retry-outbox --event UUID`. La commande refuse une réservation active et trace l'action. Ne pas relancer arbitrairement les événements terminés.
 
-La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
+## Historique et sauvegardes
 
-Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.
+GitHub : https://github.com/lebretyves/Backend_Interimatch, branche master. Les clés et données locales restent ignorées. Après commit : push puis npm run snapshot. Le bundle sauvegarde le code et les documents, pas les bases, fichiers privés ou secrets.
+
+La restauration isolée du premier dump PostgreSQL et la restauration/compilation du code 28923fc sont des preuves historiques, pas une restauration complète du dernier environnement. Lire docs/proofs et leurs dates.
+
+Le [journal](history/IMPLEMENTATION.md) conserve les incidents et états antérieurs ; cette note décrit seulement le dernier état.

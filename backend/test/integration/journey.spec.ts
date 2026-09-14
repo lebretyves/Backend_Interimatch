@@ -1,3 +1,7 @@
+import {
+  AutomationService,
+  retryOutbox,
+} from "../../src/automation/automation.module";
 import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -38,6 +42,7 @@ async function account(family: string, kind?: string) {
     .post("/api/v1/auth/register")
     .set("Origin", process.env.APP_ORIGIN!)
     .set("X-CSRF-Token", csrf.body.csrfToken)
+    .set("Idempotency-Key", randomUUID())
     .send(body)
     .expect(201);
   const me = await agent.get("/api/v1/auth/me").expect(200);
@@ -72,6 +77,7 @@ function post(c: any, path: string, body: any = {}) {
     .post("/api/v1/" + path)
     .set("Origin", process.env.APP_ORIGIN!)
     .set("X-CSRF-Token", c.token)
+    .set("Idempotency-Key", randomUUID())
     .send(body);
 }
 beforeAll(async () => {
@@ -111,12 +117,14 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
       .put("/api/v1/profile")
       .set("Origin", process.env.APP_ORIGIN!)
       .set("X-CSRF-Token", c.token)
+      .set("Idempotency-Key", randomUUID())
       .send({ ...profile, verified: true })
       .expect(400);
     await c.agent
       .put("/api/v1/profile")
       .set("Origin", process.env.APP_ORIGIN!)
       .set("X-CSRF-Token", c.token)
+      .set("Idempotency-Key", randomUUID())
       .send(profile)
       .expect(200);
   }
@@ -323,12 +331,14 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     .put("/api/v1/profile")
     .set("Origin", process.env.APP_ORIGIN!)
     .set("X-CSRF-Token", assignedNurse.token)
+    .set("Idempotency-Key", randomUUID())
     .send({ ...profile, available: [] })
     .expect(409);
   const bank = await n.agent
     .put("/api/v1/me/bank-details")
     .set("Origin", process.env.APP_ORIGIN!)
     .set("X-CSRF-Token", n.token)
+    .set("Idempotency-Key", randomUUID())
     .send({ iban: "FR001234567890DEMO12345678", fictional: true })
     .expect(200);
   await n.agent.get("/api/v1/me/documents/" + bank.body.id).expect(404);
@@ -543,4 +553,333 @@ test("document key rotation reads previous versions and writes the active versio
       });
     }
   }
+});
+
+test("secondary lists paginate, reject invalid limits and protect private caching", async () => {
+  const n = clients[4],
+    agency = clients[0],
+    outsider = clients[2];
+  await db.query(
+    "INSERT INTO notification(user_id,kind,message) SELECT $1,'TEST','FICTIF page '||g FROM generate_series(1,53) g",
+    [n.id],
+  );
+  const first = await n.agent
+    .get("/api/v1/me/notifications?limit=20&offset=0")
+    .expect(200);
+  const second = await n.agent
+    .get("/api/v1/me/notifications?limit=20&offset=20")
+    .expect(200);
+  expect(first.body.length).toBe(20);
+  expect(second.body.length).toBe(20);
+  expect(
+    first.body.some((a: any) => second.body.some((b: any) => a.id === b.id)),
+  ).toBe(false);
+  expect(first.headers["cache-control"]).toBe("no-store");
+  for (const [client, path] of [
+    [n, "me/favorites"],
+    [n, "me/history"],
+    [n, "me/documents"],
+    [n, "me/notifications"],
+    [n, "me/applications"],
+    [agency, "missions"],
+    [agency, "staffing-requests"],
+  ]) {
+    await client.agent.get("/api/v1/" + path + "?limit=51").expect(400);
+    await client.agent.get("/api/v1/" + path + "?offset=-1").expect(400);
+  }
+  const external1 = await request(app.getHttpServer())
+    .get("/api/v1/listings/external?limit=1&offset=0")
+    .expect(200);
+  const external2 = await request(app.getHttpServer())
+    .get("/api/v1/listings/external?limit=1&offset=1")
+    .expect(200);
+  expect(external1.body.items[0].id).not.toBe(external2.body.items[0].id);
+  const foreign = await outsider.agent
+    .get("/api/v1/missions?limit=50")
+    .expect(200);
+  expect(foreign.body.length).toBe(0);
+});
+
+test("sensitive mission commands replay atomically, reject changed content and recheck rights", async () => {
+  const agency = clients[0],
+    facility = clients[1];
+  const dto = {
+    agencyId: agency.org,
+    establishmentId: facility.org,
+    title: "FICTIF idempotence",
+    description: "FICTIF description de recette",
+    qualification: "IDE",
+    service: "URGENCES",
+    population: "ADULT",
+    block: "NONE",
+    requiredSkills: [],
+    desiredSkills: [],
+    minExperienceMonths: 0,
+    start: "2034-01-10T08:00:00Z",
+    end: "2034-01-10T16:00:00Z",
+    shift: "DAY",
+    address: "Lieu fictif de recette",
+    latitude: 48,
+    longitude: 2,
+    hourlySalary: 25,
+  };
+  await post(agency, "missions", dto).unset("Idempotency-Key").expect(400);
+  const key = randomUUID();
+  const [a, b] = await Promise.all([
+    post(agency, "missions", dto).set("Idempotency-Key", key).expect(201),
+    post(agency, "missions", dto).set("Idempotency-Key", key).expect(201),
+  ]);
+  expect(a.body).toEqual(b.body);
+  await post(agency, "missions", { ...dto, hourlySalary: 26 })
+    .set("Idempotency-Key", key)
+    .expect(409);
+  const publishKey = randomUUID(),
+    path = "missions/" + a.body.id + "/publish";
+  const p = await post(agency, path)
+    .set("Idempotency-Key", publishKey)
+    .expect(201);
+  const replay = await post(agency, path)
+    .set("Idempotency-Key", publishKey)
+    .expect(201);
+  expect(p.body).toEqual(replay.body);
+  const events = await db.query(
+    "SELECT id FROM outbox WHERE event='MissionOPEN' AND payload->>'missionId'=$1",
+    [a.body.id],
+  );
+  expect(events.length).toBe(1);
+  await db.query(
+    "UPDATE membership SET active=false WHERE user_id=$1 AND organization_id=$2",
+    [agency.id, agency.org],
+  );
+  try {
+    await post(agency, path).set("Idempotency-Key", publishKey).expect(404);
+  } finally {
+    await db.query(
+      "UPDATE membership SET active=true WHERE user_id=$1 AND organization_id=$2",
+      [agency.id, agency.org],
+    );
+  }
+  const needKey = randomUUID();
+  const need = {
+    establishmentId: facility.org,
+    title: "FICTIF besoin",
+    description: "FICTIF besoin de recette",
+  };
+  const n1 = await post(facility, "staffing-requests", need)
+    .set("Idempotency-Key", needKey)
+    .expect(201);
+  const n2 = await post(facility, "staffing-requests", need)
+    .set("Idempotency-Key", needKey)
+    .expect(201);
+  expect(n1.body.id).toBe(n2.body.id);
+});
+
+test("completed mission confirmation remains READY on delayed generation and replay", async () => {
+  const agency = clients[0];
+  const [a] = await db.query(
+    "SELECT a.id,a.mission_id,m.version FROM assignment a JOIN mission m ON m.id=a.mission_id WHERE m.agency_id=$1 AND a.status='COMPLETED' ORDER BY a.created_at DESC LIMIT 1",
+    [agency.org],
+  );
+  const [e] = await db.query(
+    "INSERT INTO outbox(event,payload,available_at) VALUES('AssignmentCreated',$1,now()+interval '1 day') RETURNING id",
+    [
+      JSON.stringify({
+        assignmentId: a.id,
+        missionId: a.mission_id,
+        version: a.version,
+      }),
+    ],
+  );
+  const service = app.get(AutomationService);
+  const generated = await service.confirmation(e.id);
+  expect(generated.status).toBe("READY");
+  const replay = await service.confirmation(e.id);
+  expect(replay.status).toBe("READY");
+  expect(replay.documentId).toBe(generated.documentId);
+  const download = await agency.agent
+    .get("/api/v1/me/documents/" + generated.documentId)
+    .expect(200);
+  expect(download.headers["x-infimatch-document-state"]).toBe("READY");
+});
+
+test("expired outbox lease is retried and HTTP success without business receipt is insufficient", async () => {
+  const [m] = await db.query(
+    "SELECT id,version FROM mission WHERE agency_id=$1 LIMIT 1",
+    [clients[0].org],
+  );
+  const [e] = await db.query(
+    "INSERT INTO outbox(event,payload,attempts,lease_until,lease_token) VALUES('MatchRequested',$1,1,now()-interval '1 second',$2) RETURNING id",
+    [JSON.stringify({ missionId: m.id, version: m.version }), randomUUID()],
+  );
+  const service = app.get(AutomationService);
+  const first = await service.dispatch(
+    1,
+    async () => new Response("{}", { status: 200 }),
+    e.id,
+  );
+  expect(first[0]?.status).toBe("RETRY_PENDING");
+  let [state] = await db.query(
+    "SELECT completed_at,attempts FROM outbox WHERE id=$1",
+    [e.id],
+  );
+  expect(state.completed_at).toBe(null);
+  expect(state.attempts).toBe(2);
+  await db.query("UPDATE outbox SET available_at=now() WHERE id=$1", [e.id]);
+  const second = await service.dispatch(
+    1,
+    async () => {
+      await db.query(
+        "INSERT INTO workflow_receipt(event_id,action) VALUES($1,'matches')",
+        [e.id],
+      );
+      return new Response("{}", { status: 200 });
+    },
+    e.id,
+  );
+  expect(second[0]?.status).toBe("COMPLETED");
+  [state] = await db.query(
+    "SELECT completed_at,attempts FROM outbox WHERE id=$1",
+    [e.id],
+  );
+  expect(state.completed_at).not.toBe(null);
+  expect(state.attempts).toBe(3);
+});
+
+test("expired PDF lease cannot overwrite the document published by its successor", async () => {
+  const [a] = await db.query(
+    "SELECT a.id,a.mission_id,m.version,a.nurse_id FROM assignment a JOIN mission m ON m.id=a.mission_id WHERE m.agency_id=$1 AND a.status='COMPLETED' ORDER BY a.created_at DESC LIMIT 1",
+    [clients[0].org],
+  );
+  const [e] = await db.query(
+    "INSERT INTO outbox(event,payload,available_at) VALUES('AssignmentCreated',$1,now()+interval '1 day') RETURNING id",
+    [
+      JSON.stringify({
+        assignmentId: a.id,
+        missionId: a.mission_id,
+        version: a.version,
+      }),
+    ],
+  );
+  await db.query(
+    "UPDATE mission_confirmation SET status='FAILED',document_id=NULL,lease_until=NULL WHERE assignment_id=$1",
+    [a.id],
+  );
+  const real = app.get(DocumentsService);
+  let started!: () => void, release!: () => void;
+  const entered = new Promise<void>((r) => (started = r)),
+    wait = new Promise<void>((r) => (release = r));
+  let firstDocument: string | undefined;
+  const slow = {
+    store: async (...args: Parameters<DocumentsService["store"]>) => {
+      started();
+      await wait;
+      const stored = await real.store(...args);
+      firstDocument = stored.id;
+      return stored;
+    },
+  } as DocumentsService;
+  const stale = new AutomationService(db, slow).confirmation(e.id);
+  const observed = stale.then(
+    () => ({ rejected: false }),
+    () => ({ rejected: true }),
+  );
+  await entered;
+  await db.query(
+    "UPDATE mission_confirmation SET lease_until=now()-interval '1 second' WHERE assignment_id=$1",
+    [a.id],
+  );
+  const winner = await new AutomationService(db, real).confirmation(e.id);
+  release();
+  expect((await observed).rejected).toBe(true);
+  const [current] = await db.query(
+    "SELECT status,document_id FROM mission_confirmation WHERE assignment_id=$1",
+    [a.id],
+  );
+  expect(current.status).toBe("READY");
+  expect(current.document_id).toBe(winner.documentId);
+  await clients[0].agent
+    .get("/api/v1/me/documents/" + firstDocument)
+    .expect(404);
+});
+
+test("V1 recommendations rank only eligible entries and expose pending RPPS separately", async () => {
+  const n = clients[clients.length - 1];
+  await db.query(
+    "UPDATE profile SET qualifications=ARRAY['IDE'],rpps_status='PENDING' WHERE user_id=$1",
+    [n.id],
+  );
+  const response = await n.agent.get("/api/v1/me/matches?limit=50").expect(200);
+  expect(response.body.items).toEqual([]);
+  expect(response.body.rppsStatus).toBe("PENDING");
+  expect(response.body.excluded).toBeGreaterThan(0);
+  const [m] = await db.query(
+    "SELECT id FROM mission WHERE agency_id=$1 AND status='OPEN' ORDER BY created_at DESC LIMIT 1",
+    [clients[0].org],
+  );
+  const candidates = await clients[0].agent
+    .get("/api/v1/missions/" + m.id + "/candidates?limit=50")
+    .expect(200);
+  expect(
+    candidates.body.items.every(
+      (r: any) => r.eligible === true && r.score !== null,
+    ),
+  ).toBe(true);
+});
+
+test("exhausted automation reports its state and explicit retry refuses active leases", async () => {
+  const [e] = await db.query(
+    "INSERT INTO outbox(event,payload,attempts) VALUES('MatchRequested','{}',4) RETURNING id",
+  );
+  const service = app.get(AutomationService);
+  const result = await service.dispatch(
+    1,
+    async () => new Response("", { status: 503 }),
+    e.id,
+  );
+  expect(result[0]?.status).toBe("EXHAUSTED");
+  expect(
+    await service.dispatch(
+      1,
+      async () => {
+        throw new Error("must not be called");
+      },
+      e.id,
+    ),
+  ).toEqual([]);
+  await db.query(
+    "UPDATE outbox SET lease_until=now()+interval '1 minute' WHERE id=$1",
+    [e.id],
+  );
+  await expect(retryOutbox(db, e.id)).rejects.toThrow("reserved");
+  await db.query(
+    "UPDATE outbox SET lease_until=now()-interval '1 second' WHERE id=$1",
+    [e.id],
+  );
+  expect((await retryOutbox(db, e.id)).status).toBe("QUEUED");
+  const [row] = await db.query(
+    "SELECT attempts,lease_token,last_error FROM outbox WHERE id=$1",
+    [e.id],
+  );
+  expect(row).toEqual({ attempts: 0, lease_token: null, last_error: null });
+  await db.query("UPDATE outbox SET completed_at=now() WHERE id=$1", [e.id]);
+});
+
+test("OpenAPI documents idempotency headers and paginated response contracts", async () => {
+  const result = await request(app.getHttpServer())
+    .get("/api/docs-json")
+    .expect(200);
+  const command = result.body.paths["/api/v1/missions"].post;
+  expect(
+    command.parameters.some(
+      (p: any) => p.name === "Idempotency-Key" && p.required,
+    ),
+  ).toBe(true);
+  expect(command.responses[201].content["application/json"].schema.$ref).toBe(
+    "#/components/schemas/MissionCommand",
+  );
+  const list = result.body.paths["/api/v1/me/notifications"].get;
+  expect(list.parameters.some((p: any) => p.name === "offset")).toBe(true);
+  expect(list.responses[200].content["application/json"].schema.type).toBe(
+    "array",
+  );
 });

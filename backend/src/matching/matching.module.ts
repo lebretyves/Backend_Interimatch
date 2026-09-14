@@ -117,7 +117,8 @@ export class MatchingService implements OnModuleDestroy {
       [actor],
     );
     let cursor = "00000000-0000-0000-0000-000000000000",
-      scanned = 0;
+      scanned = 0,
+      excluded = 0;
     const top: any[] = [];
     const compare = (a: any, b: any) =>
       (b.result.score ?? -1) - (a.result.score ?? -1) ||
@@ -126,19 +127,21 @@ export class MatchingService implements OnModuleDestroy {
     while (true) {
       const batch = await this.db.query(
         missionSelect +
-          " WHERE m.status='OPEN' AND m.end_at>now() AND m.qualification=ANY($1) AND m.id>$2::uuid ORDER BY m.id LIMIT 100",
+          " WHERE m.status='OPEN' AND m.start_at>now() AND m.qualification=ANY($1) AND m.id>$2::uuid ORDER BY m.id LIMIT 100",
         [p.qualifications, cursor],
       );
       if (!batch.length) break;
       for (const m of batch) {
-        top.push({
-          m,
-          result: match(
-            professional(p, conflicts),
-            matchingMission(m),
-            await geodesicKm(this.db, p, m),
-          ),
-        });
+        const result = match(
+          professional(p, conflicts),
+          matchingMission(m),
+          await geodesicKm(this.db, p, m),
+        );
+        if (!result.eligible) {
+          excluded++;
+          continue;
+        }
+        top.push({ m, result });
         top.sort(compare);
         if (top.length > page.offset + page.limit) top.pop();
         scanned++;
@@ -148,7 +151,14 @@ export class MatchingService implements OnModuleDestroy {
     const items = [];
     for (const item of top.slice(page.offset))
       items.push(await this.calculate(actor, item.m, p, conflicts));
-    return { items, limit: page.limit, offset: page.offset, total: scanned };
+    return {
+      items,
+      limit: page.limit,
+      offset: page.offset,
+      total: scanned,
+      excluded,
+      rppsStatus: p.rpps_status,
+    };
   }
   async forMission(actor: string, id: string, page: PageDto = new PageDto()) {
     const m = await this.db.transaction(async (em) => {
@@ -158,7 +168,8 @@ export class MatchingService implements OnModuleDestroy {
       return m;
     });
     let cursor = "00000000-0000-0000-0000-000000000000",
-      scanned = 0;
+      scanned = 0,
+      excluded = 0;
     const top: any[] = [];
     while (true) {
       const batch = await this.db.query(
@@ -176,6 +187,10 @@ export class MatchingService implements OnModuleDestroy {
           matchingMission(m),
           await geodesicKm(this.db, p, m),
         );
+        if (!result.eligible || new Date(m.start_at).getTime() <= Date.now()) {
+          excluded++;
+          continue;
+        }
         top.push({
           candidateId: p.user_id,
           qualifications: p.qualifications,
@@ -197,6 +212,7 @@ export class MatchingService implements OnModuleDestroy {
       limit: page.limit,
       offset: page.offset,
       total: scanned,
+      excluded,
     };
   }
   async explanation(actor: string, id: string) {

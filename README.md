@@ -6,6 +6,8 @@ Le périmètre cible reste **100 % de la V1 validée**. Ce dépôt contient une 
 
 ## Documentation du projet
 
+**Dernière recette : [bilan des corrections et manques V1](docs/RECETTE_BACKEND_V1.md).**
+
 - [Requirements : exigences V1, acceptation et limites](docs/REQUIREMENTS_V1.md)
 - [Architecture avec schéma intégré](docs/SCHEMA_ARCHITECTURE_V1.md) et [plan des fichiers](docs/PLAN_ARCHITECTURE_V1.md)
 - [Flux : authentification, RPPS, matching, affectation et n8n](docs/FLUX_V1.md)
@@ -13,7 +15,7 @@ Le périmètre cible reste **100 % de la V1 validée**. Ce dépôt contient une 
 
 Les schémas Mermaid sont inclus dans les fichiers Markdown et s'affichent dans un lecteur compatible. La [source architecture-v1.mmd](docs/architecture-v1.mmd) reste modifiable. Les documents distinguent le backend présent, les scénarios testés et les travaux restants.
 
-Dernier code vérifié : voir docs/proofs/verification.json, **48 tests réussis**, couverture des lignes **68,52 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. L’accès ANS/RPPS, le frontend et le déploiement distant restent à valider. France Travail et FINESS sont importés réellement.
+Dernier code vérifié : voir docs/proofs/verification.json, **56 tests réussis**, couverture des lignes **75,99 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. Les accès ANS/RPPS (FOUND et NOT_FOUND), France Travail et FINESS sont vérifiés. Frontend et déploiement distant restent à valider.
 
 ## Démarrer sous PowerShell
 
@@ -129,24 +131,22 @@ node backend/dist/cli.js reconcile-documents --minimum-age-minutes 5
 
 La commande ne rend READY qu'un fichier dont le chiffrement et la taille ont été vérifiés. Un fichier absent, une clé manquante ou un tag invalide laisse le document en attente. Le rapport livré est aussi disponible dans [coverage-report.zip](docs/proofs/coverage-report.zip).
 
-## Actualisation des acces fournisseurs
+## Contrat client apres recette V1
 
-France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](docs/ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
+Les creations/modifications/transitions de mission, candidatures et creations de besoins requierent `Idempotency-Key` en plus du cookie, Origin et CSRF. Generer une cle pour une nouvelle commande ; reutiliser la meme pour son rejeu reseau. Une cle absente donne 400, un contenu different avec la meme cle donne 409. Les droits sont controles a nouveau sur rejeu.
 
-## Etat confirme le 15 septembre 2026
+Les listes secondaires acceptent `limit` (20 par defaut, maximum 50) et `offset` (0 a 10000), en conservant leur forme de reponse. Les propositions classent seulement les dossiers admissibles. `excluded` indique le nombre exclu et `rppsStatus` explique la situation RPPS du professionnel.
 
-48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
+Apres cinq echecs, un evenement est signale EXHAUSTED. Reprise explicite et tracee :
 
-Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
+```powershell
+node backend/dist/cli.js retry-outbox --event UUID_EVENEMENT
+```
 
-Les instructions completes d’import FINESS et les preuves fournisseurs sont dans [ACQUISITION_REELLE.md](docs/ACQUISITION_REELLE.md).
+Le depot et le remplacement documentaire ne disposent pas encore du meme protocole complet d'idempotence. Voir le bilan pour les autres limites.
 
-## Acces ANS/FHIR verifie le 15 septembre 2026
+## Fournisseurs et sauvegarde GitHub
 
-La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
+[Acquisition reelle et FINESS](docs/ACQUISITION_REELLE.md). Le RPPS positif est demontre dans [la preuve ANS](docs/proofs/ans-fhir-positive.json), sans modification de profil reel.
 
-Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.
-
-## Sauvegarde GitHub
-
-Depot : https://github.com/lebretyves/Backend_Interimatch ; branche master. Apres verification et commit : `git push origin master`, puis `npm run snapshot` pour le bundle local. Git sauvegarde le code et la documentation, pas les cles, bases ni fichiers locaux ignores.
+Depot : https://github.com/lebretyves/Backend_Interimatch ; branche master. Apres verification et commit : `git push origin master`, puis `npm run snapshot`. Les cles, bases et fichiers locaux ignores ne sont pas sauvegardes par Git.

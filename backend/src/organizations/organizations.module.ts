@@ -1,3 +1,7 @@
+import { commandReceipt } from "../common/idempotency";
+import { Headers } from "@nestjs/common";
+import { PageDto } from "../common/page.dto";
+import { Query } from "@nestjs/common";
 import { FINESS_PATTERN } from "../reference-data/finess";
 import { ApiProperty } from "@nestjs/swagger";
 import {
@@ -90,21 +94,33 @@ class OrganizationsController {
       return { ok: true };
     });
   }
-  @Post("staffing-requests") create(@Req() r: Request, @Body() b: NeedDto) {
+  @Post("staffing-requests") create(
+    @Req() r: Request,
+    @Body() b: NeedDto,
+    @Headers("idempotency-key") key: string,
+  ) {
     return this.db.transaction(async (em) => {
       await member(em, user(r), b.establishmentId, "ESTABLISHMENT");
+      const receipt = await commandReceipt(
+        em,
+        user(r),
+        "staffing-request:create",
+        key,
+        b,
+      );
+      if (receipt.replay) return receipt.response;
       const [need] = await em.query(
         "INSERT INTO staffing_request(establishment_id,title,description,created_by) VALUES($1,$2,$3,$4) RETURNING *",
         [b.establishmentId, b.title, b.description, user(r)],
       );
       await audit(em, user(r), "STAFFING_REQUEST_CREATED", need.id);
-      return need;
+      return receipt.save(need);
     });
   }
-  @Get("staffing-requests") list(@Req() r: Request) {
+  @Get("staffing-requests") list(@Req() r: Request, @Query() page: PageDto) {
     return this.db.query(
-      "SELECT s.* FROM staffing_request s WHERE EXISTS(SELECT 1 FROM membership m WHERE m.user_id=$1 AND m.active AND (m.organization_id=s.establishment_id OR EXISTS(SELECT 1 FROM agency_link l WHERE l.agency_id=m.organization_id AND l.establishment_id=s.establishment_id))) ORDER BY s.created_at DESC,s.id LIMIT 50",
-      [user(r)],
+      "SELECT s.* FROM staffing_request s WHERE EXISTS(SELECT 1 FROM membership m WHERE m.user_id=$1 AND m.active AND (m.organization_id=s.establishment_id OR EXISTS(SELECT 1 FROM agency_link l WHERE l.agency_id=m.organization_id AND l.establishment_id=s.establishment_id))) ORDER BY s.created_at DESC,s.id LIMIT $2 OFFSET $3",
+      [user(r), page.limit, page.offset],
     );
   }
   @Put("me/notification-preferences") preferences(

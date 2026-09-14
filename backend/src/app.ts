@@ -1,3 +1,4 @@
+import { configureOpenApi } from "./openapi";
 import { FinessModule } from "./reference-data/finess.module";
 import "reflect-metadata";
 import "./config";
@@ -122,6 +123,11 @@ export async function createApp() {
       },
     }),
   );
+  app.use((req: any, res: any, next: any) => {
+    if (req.session?.userId || req.path.startsWith("/api/v1/auth"))
+      res.setHeader("Cache-Control", "no-store");
+    next();
+  });
   app.use(
     "/api/v1/auth",
     rateLimit({
@@ -198,6 +204,7 @@ export async function createApp() {
       .addCookieAuth("infimatch.sid")
       .build(),
   );
+  configureOpenApi(document);
   SwaggerModule.setup("api/docs", app, document);
   app.enableShutdownHooks();
   const close = app.close.bind(app);

@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-14T22:01:35.560Z",
+  "date": "2026-09-14T22:24:13.162Z",
   "results": [
     {
       "command": "npm run typecheck",
@@ -14,10 +14,6 @@
       "exitCode": 0
     }
   ],
-  "testsPassed": 48,
-  "additionalLiveChecks": [
-    "france-travail-live.json",
-    "finess-live.json"
-  ],
-  "codeCommit": "05e171167b8e48404beae14bfe94b722f32ada75"
+  "testsPassed": 56,
+  "scope": "Unit and HTTP integration tests including real local n8n workflows. Provider scripts and separate n8n callback API are not instrumented."
 }

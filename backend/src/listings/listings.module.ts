@@ -1,3 +1,5 @@
+import { PageDto } from "../common/page.dto";
+import { Query } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import {
   Controller,
@@ -86,11 +88,12 @@ class ListingsController {
       unknownExternalFieldsExcluded: strictUnknown,
     };
   }
-  @Get("listings/external") async external() {
+  @Get("listings/external") async external(@Query() page: PageDto) {
     return {
       items: (
         await this.db.query(
-          "SELECT id,source,source_id,title,description,url,location_label,qualification,imported_at,expires_at FROM external_offer WHERE active AND (expires_at IS NULL OR expires_at>now()) ORDER BY imported_at DESC,id LIMIT 20",
+          "SELECT id,source,source_id,title,description,url,location_label,qualification,imported_at,expires_at FROM external_offer WHERE active AND (expires_at IS NULL OR expires_at>now()) ORDER BY imported_at DESC,id LIMIT $1 OFFSET $2",
+          [page.limit, page.offset],
         )
       ).map((e) => ({
         ...e,
@@ -124,9 +127,10 @@ class ListingsController {
     if (!m) throw new NotFoundException();
     return { ...m, id, kind: "INTERNAL_MISSION" };
   }
-  @Get("facilities") async facilities() {
+  @Get("facilities") async facilities(@Query() page: PageDto) {
     return this.db.query(
-      "SELECT id,name,address,finess FROM organization WHERE kind='ESTABLISHMENT' ORDER BY name,id LIMIT 50",
+      "SELECT id,name,address,finess FROM organization WHERE kind='ESTABLISHMENT' ORDER BY name,id LIMIT $1 OFFSET $2",
+      [page.limit, page.offset],
     );
   }
   @Post("me/favorites")
@@ -151,10 +155,10 @@ class ListingsController {
   }
   @Get("me/favorites")
   @UseGuards(SessionGuard)
-  async favorites(@Req() r: Request) {
+  async favorites(@Req() r: Request, @Query() page: PageDto) {
     return this.db.query(
-      `SELECT f.kind,f.target_id,COALESCE(m.title,e.title,o.name) AS title,m.status,e.expires_at,e.active FROM favorite f LEFT JOIN mission m ON f.kind='MISSION' AND m.id=f.target_id LEFT JOIN external_offer e ON f.kind='EXTERNAL' AND e.id=f.target_id LEFT JOIN organization o ON f.kind='ESTABLISHMENT' AND o.id=f.target_id WHERE f.user_id=$1 ORDER BY f.created_at DESC,f.target_id LIMIT 50`,
-      [user(r)],
+      `SELECT f.kind,f.target_id,COALESCE(m.title,e.title,o.name) AS title,m.status,e.expires_at,e.active FROM favorite f LEFT JOIN mission m ON f.kind='MISSION' AND m.id=f.target_id LEFT JOIN external_offer e ON f.kind='EXTERNAL' AND e.id=f.target_id LEFT JOIN organization o ON f.kind='ESTABLISHMENT' AND o.id=f.target_id WHERE f.user_id=$1 ORDER BY f.created_at DESC,f.target_id,f.kind LIMIT $2 OFFSET $3`,
+      [user(r), page.limit, page.offset],
     );
   }
   @Delete("me/favorites/:kind/:id")
@@ -172,10 +176,10 @@ class ListingsController {
   }
   @Get("me/history")
   @UseGuards(SessionGuard)
-  async history(@Req() r: Request) {
+  async history(@Req() r: Request, @Query() page: PageDto) {
     return this.db.query(
-      `SELECT a.*,m.title,CASE WHEN now()<a.start_at THEN 'upcoming' WHEN now()<a.end_at THEN 'in_progress' ELSE 'past' END AS temporal_position FROM assignment a JOIN mission m ON m.id=a.mission_id WHERE a.nurse_id=$1 ORDER BY a.start_at DESC,a.id LIMIT 50`,
-      [user(r)],
+      `SELECT a.*,m.title,CASE WHEN now()<a.start_at THEN 'upcoming' WHEN now()<a.end_at THEN 'in_progress' ELSE 'past' END AS temporal_position FROM assignment a JOIN mission m ON m.id=a.mission_id WHERE a.nurse_id=$1 ORDER BY a.start_at DESC,a.id LIMIT $2 OFFSET $3`,
+      [user(r), page.limit, page.offset],
     );
   }
   @Get("dashboards")
@@ -208,10 +212,11 @@ class ListingsController {
   }
   @Get("me/notifications") @UseGuards(SessionGuard) notifications(
     @Req() r: Request,
+    @Query() page: PageDto,
   ) {
     return this.db.query(
-      "SELECT * FROM notification WHERE user_id=$1 ORDER BY created_at DESC,id LIMIT 50",
-      [user(r)],
+      "SELECT * FROM notification WHERE user_id=$1 ORDER BY created_at DESC,id LIMIT $2 OFFSET $3",
+      [user(r), page.limit, page.offset],
     );
   }
   @Post("me/notifications/:id/read") @UseGuards(SessionGuard) async read(

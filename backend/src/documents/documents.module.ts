@@ -1,3 +1,5 @@
+import { PageDto } from "../common/page.dto";
+import { Query } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import {
   Controller,
@@ -228,10 +230,10 @@ class DocumentsController {
     await this.db.transaction(async (em) => nurse(em, user(r)));
     return this.documents.store(user(r), "EVIDENCE", b.mime, data);
   }
-  @Get("documents") list(@Req() r: Request) {
+  @Get("documents") list(@Req() r: Request, @Query() page: PageDto) {
     return this.db.query(
-      "SELECT id,kind,mime,size_bytes,status,created_at FROM document WHERE owner_id=$1 AND kind!='BANK' ORDER BY created_at DESC,id LIMIT 50",
-      [user(r)],
+      "SELECT id,kind,mime,size_bytes,status,created_at FROM document WHERE owner_id=$1 AND kind!='BANK' AND (kind!='CONFIRMATION' OR EXISTS(SELECT 1 FROM mission_confirmation c WHERE c.document_id=document.id AND c.status IN('READY','CANCELLED','SUPERSEDED'))) ORDER BY created_at DESC,id LIMIT $2 OFFSET $3",
+      [user(r), page.limit, page.offset],
     );
   }
   @Get("documents/:id") async download(

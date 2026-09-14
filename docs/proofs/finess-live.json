@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-14T22:02:03.150Z",
+  "checkedAt": "2026-09-14T22:25:14.015Z",
   "sourceDataset": "https://www.data.gouv.fr/datasets/finess-structures-1",
   "snapshot": {
     "id": 1,
@@ -32,6 +32,5 @@
     "identity-without-coordinates"
   ],
   "coordinatesPolicy": "Use range-valid source pairs; no inferred projected conversion; conflicting pairs remain unknown",
-  "organizationRightsGranted": false,
-  "codeCommit": "05e171167b8e48404beae14bfe94b722f32ada75"
+  "organizationRightsGranted": false
 }

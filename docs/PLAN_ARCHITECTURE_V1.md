@@ -57,3 +57,5 @@ La [note de reprise](REPRISE_BACKEND_V1.md) dÃ©taille les limites. Le [plannin
 - [Prompt source figÃ©](references/Interimatch_Sante_Mega_Prompt_Backend_V1.md)
 - [Architecture source figÃ©e](references/Interimatch_Sante_Architecture_Backend_V1.md)
 - [Matrice complÃ¨te](MATRICE_VALIDATION_V1.csv)
+
+Voir la [recette actuelle](RECETTE_BACKEND_V1.md) : reprises de reservation outbox/PDF testees, cas RPPS positif confirme.

@@ -1,3 +1,4 @@
+import { retryOutbox } from "./automation/automation.module";
 import { importFiness } from "./reference-data/finess";
 import { DocumentsService } from "./documents/documents.module";
 import { seedDemo } from "./demo/seed";
@@ -117,6 +118,20 @@ cli
           2,
         ),
       );
+    } finally {
+      await db.onModuleDestroy();
+    }
+  });
+cli
+  .command("retry-outbox")
+  .requiredOption("--event <uuid>")
+  .description(
+    "Explicitly requeue an interrupted or exhausted event; refuses an active lease",
+  )
+  .action(async (opts) => {
+    const db = await new Database().connect();
+    try {
+      console.log(JSON.stringify(await retryOutbox(db, opts.event)));
     } finally {
       await db.onModuleDestroy();
     }

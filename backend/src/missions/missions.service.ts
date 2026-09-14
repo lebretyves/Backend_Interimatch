@@ -1,3 +1,4 @@
+import { commandReceipt } from "../common/idempotency";
 import { geodesicKm } from "../database/distance";
 import {
   Injectable,
@@ -51,6 +52,8 @@ export async function scope(
   if (!rows.length) throw new NotFoundException();
 }
 export async function eligible(em: SqlClient, p: any, m: any) {
+  if (new Date(m.start_at).getTime() <= Date.now())
+    throw new ConflictException("Mission already started");
   const conflicts = await em.query(
     "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
     [p.user_id],
@@ -83,7 +86,7 @@ export class MissionsService {
         "Specialty only applies to specialized block",
       );
   }
-  async create(actor: string, b: MissionDto) {
+  async create(actor: string, b: MissionDto, key?: string) {
     this.validate(b);
     return this.db.transaction(async (em) => {
       await member(em, actor, b.agencyId, "AGENCY");
@@ -93,6 +96,8 @@ export class MissionsService {
       );
       if (!linked.length)
         throw new NotFoundException("Authorized establishment link required");
+      const receipt = await commandReceipt(em, actor, "mission:create", key, b);
+      if (receipt.replay) return receipt.response;
       const [m] = await em.query(
         `INSERT INTO mission(agency_id,establishment_id,title,description,qualification,service,population,block,specialty,required_skills,desired_skills,min_experience_months,start_at,end_at,shift,address,location,hourly_salary) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,ST_SetSRID(ST_MakePoint($17,$18),4326)::geography,$19) RETURNING id,version,status`,
         [
@@ -118,14 +123,22 @@ export class MissionsService {
         ],
       );
       await audit(em, actor, "MISSION_CREATED", m.id);
-      return m;
+      return receipt.save(m);
     });
   }
-  async edit(actor: string, id: string, b: MissionDto) {
+  async edit(actor: string, id: string, b: MissionDto, key?: string) {
     this.validate(b);
     return this.db.transaction(async (em) => {
       const m = await lockMission(em, id);
       await scope(em, actor, m, true);
+      const receipt = await commandReceipt(
+        em,
+        actor,
+        "mission:edit:" + id,
+        key,
+        b,
+      );
+      if (receipt.replay) return receipt.response;
       if (!["DRAFT", "OPEN"].includes(m.status))
         throw new ConflictException(
           "Cancel and republish assigned missions before changing them",
@@ -198,17 +211,31 @@ export class MissionsService {
       await audit(em, actor, "MISSION_REVISED", id, {
         version: updated.version,
       });
-      return updated;
+      if (revision && m.status === "OPEN")
+        await event(em, "MissionOPEN", {
+          missionId: id,
+          version: updated.version,
+        });
+      return receipt.save(updated);
     });
   }
   async transition(
     actor: string,
     id: string,
     action: "publish" | "cancel" | "reopen" | "complete",
+    key?: string,
   ) {
     return this.db.transaction(async (em) => {
       const m = await lockMission(em, id);
       await scope(em, actor, m, true);
+      const receipt = await commandReceipt(
+        em,
+        actor,
+        "mission:" + action + ":" + id,
+        key,
+        {},
+      );
+      if (receipt.replay) return receipt.response;
       const target = {
         publish: "OPEN",
         cancel: "CANCELLED",
@@ -256,13 +283,21 @@ export class MissionsService {
         missionId: id,
         version: updated.version,
       });
-      return updated;
+      return receipt.save(updated);
     });
   }
-  async apply(actor: string, id: string, version: number) {
+  async apply(actor: string, id: string, version: number, key?: string) {
     return this.db.transaction(async (em) => {
       const m = await lockMission(em, id);
       const p = await nurse(em, actor);
+      const receipt = await commandReceipt(
+        em,
+        actor,
+        "application:submit:" + id,
+        key,
+        { version },
+      );
+      if (receipt.replay) return receipt.response;
       const [previous] = await em.query(
         "SELECT * FROM application WHERE mission_id=$1 AND nurse_id=$2 FOR UPDATE",
         [id, actor],
@@ -281,13 +316,14 @@ export class MissionsService {
         version,
         previousStatus: previous?.status ?? null,
       });
-      return a;
+      return receipt.save(a);
     });
   }
   async applicationAction(
     actor: string,
     id: string,
     action: "WITHDRAWN" | "SELECTED" | "REJECTED",
+    key?: string,
   ) {
     return this.db.transaction(async (em) => {
       const [ref] = await em.query(
@@ -304,6 +340,14 @@ export class MissionsService {
       if (action === "WITHDRAWN") {
         if (a.nurse_id !== actor) throw new NotFoundException();
       } else await scope(em, actor, m);
+      const receipt = await commandReceipt(
+        em,
+        actor,
+        "application:" + action + ":" + id,
+        key,
+        {},
+      );
+      if (receipt.replay) return receipt.response;
       if (!["SUBMITTED", "SELECTED"].includes(a.status))
         throw new ConflictException("Invalid application transition");
       if (
@@ -316,7 +360,7 @@ export class MissionsService {
         [id, action],
       );
       await audit(em, actor, "APPLICATION_" + action, id);
-      return { id, status: action };
+      return receipt.save({ id, status: action });
     });
   }
   async assign(actor: string, id: string, applicationId: string, key: string) {
