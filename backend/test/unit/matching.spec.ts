@@ -106,3 +106,22 @@ test("timezone required and interval positive", () => {
   ).toThrow();
   expect(() => interval({ start: slot.end, end: slot.start })).toThrow();
 });
+
+test("documented score example is 93.75 and exposes components", () => {
+  const result = match(
+    {
+      ...p,
+      experience: [
+        {
+          service: "URGENCES",
+          start: "2020-01-01T00:00:00Z",
+          end: "2025-01-01T00:00:00Z",
+        },
+      ],
+    },
+    m,
+    7.5,
+  );
+  expect(result.score).toBe(93.75);
+  expect(result.components).toEqual({ C: 1, Z: 0.75, D: 1, E: 1 });
+});

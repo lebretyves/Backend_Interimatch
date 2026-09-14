@@ -1,3 +1,4 @@
+import { MATCH_RULES } from "./rules";
 import { DateTime } from "luxon";
 export type Qualification = "IDE" | "IADE" | "IBODE";
 export type Interval = { start: string; end: string };
@@ -93,7 +94,11 @@ export function distanceKm(a: number, b: number, c: number, d: number): number {
       Math.cos(a * r) * Math.cos(c * r) * Math.sin(((d - b) * r) / 2) ** 2;
   return 6371.0088 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
-export function match(p: Professional, m: MatchMission) {
+export function match(
+  p: Professional,
+  m: MatchMission,
+  computedDistance?: number | null,
+) {
   const reasons: string[] = [];
   if (m.status !== "OPEN") reasons.push("MISSION_NOT_OPEN");
   if (!p.qualifications.includes(m.qualification))
@@ -127,8 +132,13 @@ export function match(p: Professional, m: MatchMission) {
   )
     reasons.push("MOBILITY_INCOMPLETE");
   else {
-    distance = distanceKm(p.latitude, p.longitude, m.latitude, m.longitude);
-    if (distance > p.radiusKm) reasons.push("OUTSIDE_RADIUS");
+    distance =
+      computedDistance === undefined
+        ? distanceKm(p.latitude, p.longitude, m.latitude, m.longitude)
+        : computedDistance;
+    if (distance === null || !Number.isFinite(distance))
+      reasons.push("MOBILITY_INCOMPLETE");
+    else if (distance > p.radiusKm) reasons.push("OUTSIDE_RADIUS");
   }
   if (reasons.length)
     return {
@@ -151,7 +161,14 @@ export function match(p: Professional, m: MatchMission) {
   return {
     eligible: true,
     score:
-      Math.round(100 * (0.45 * C + 0.25 * Z + 0.2 * D + 0.1 * E) * 100) / 100,
+      Math.round(
+        100 *
+          (MATCH_RULES.weights.C * C +
+            MATCH_RULES.weights.Z * Z +
+            MATCH_RULES.weights.D * D +
+            MATCH_RULES.weights.E * E) *
+          100,
+      ) / 100,
     components: { C, Z, D, E },
     reasons,
     distanceKm: distance,

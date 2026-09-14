@@ -1,3 +1,4 @@
+import { DocumentsService } from "./documents/documents.module";
 import { seedDemo } from "./demo/seed";
 import "reflect-metadata";
 import "./config";
@@ -75,6 +76,27 @@ cli
     const db = await new Database().connect();
     try {
       console.log(JSON.stringify(await seedDemo(db), null, 2));
+    } finally {
+      await db.onModuleDestroy();
+    }
+  });
+cli
+  .command("reconcile-documents")
+  .option(
+    "--minimum-age-minutes <number>",
+    "Only inspect interrupted writes older than this age",
+    "5",
+  )
+  .action(async (opts) => {
+    const db = await new Database().connect();
+    try {
+      console.log(
+        JSON.stringify(
+          await new DocumentsService(db).reconcile(
+            Number(opts.minimumAgeMinutes),
+          ),
+        ),
+      );
     } finally {
       await db.onModuleDestroy();
     }

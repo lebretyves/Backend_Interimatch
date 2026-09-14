@@ -22,3 +22,12 @@
 - Seed rejouable, trois comptes fictifs, secrets locaux ignor?s. Import France Travail test? sans cl?s : ?chec explicite, aucune acquisition fictive revendiqu?e.
 - Sauvegarde PostgreSQL restaur?e dans une base s?par?e, coh?rence v?rifi?e. Historique Git et bundles ind?pendants des donn?es/clefs.
 - Les ?carts de production, int?gration publique, lots/pagination et recette exhaustive restent ouverts dans REPRISE_BACKEND_V1.md. Ce point de reprise n'est pas une validation ? 100 % de la V1.
+
+## Renforcements après le point e0defee
+- Classement global des recommandations/candidats par lots, pagination validée, notifications et relances par lots sans coupure arbitraire.
+- Même distance PostGIS pour recherche, matching, affectation et contrôle du profil ; pondérations configurables et versionnées par empreinte.
+- Recherche commune interne/externe et favoris d'offre expirée vérifiés sur une source TEST_FIXTURE clairement synthétique.
+- Reprises SQL bornées, panne MongoDB explicite avec audit, traces expirées/périmées rejetées, récupération STAGING et rotation des clés testées sur des fichiers fictifs.
+- Session renouvelée à la connexion, session expirée refusée, routes de service interdites aux comptes ordinaires, clôture atomique et impossibilité de rouvrir une mission terminée testées.
+- Dernière vérification : 44 tests réussis ; couverture 70,11 % lignes et 80,91 % branches. Audit npm : zéro alerte. Aucun accès public authentifié réel nouveau.
+- Contrôle de secrets corrigé pour gérer nouveaux fichiers et suppressions ; aucune valeur de secret local détectée. Lanceur de vérification corrigé pour éviter le shell intermédiaire Windows.

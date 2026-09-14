@@ -61,11 +61,17 @@ class Errors implements ExceptionFilter {
       res = http.getResponse(),
       req = http.getRequest();
     const status =
-      error instanceof HttpException
-        ? error.getStatus()
-        : ["23505", "23P01", "23514", "40001", "40P01"].includes(error?.code)
-          ? 409
-          : 500;
+      error?.type === "entity.too.large"
+        ? 413
+        : error?.type === "entity.parse.failed"
+          ? 400
+          : error instanceof HttpException
+            ? error.getStatus()
+            : ["23505", "23P01", "23514", "40001", "40P01"].includes(
+                  error?.code,
+                )
+              ? 409
+              : 500;
     const detail =
       error instanceof HttpException ? error.getResponse() : undefined;
     const message =
@@ -155,6 +161,24 @@ export async function createApp() {
       });
     next();
   });
+  app.use(
+    "/api/v1/me/documents",
+    rateLimit({
+      windowMs: 60000,
+      limit: 30,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+    }),
+  );
+  app.use(
+    "/api/v1/me/matches",
+    rateLimit({
+      windowMs: 60000,
+      limit: 15,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+    }),
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

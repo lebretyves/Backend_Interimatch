@@ -1,3 +1,10 @@
+import { randomBytes } from "node:crypto";
+import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
+import { projectRoot } from "../../src/config";
+import { DocumentsService } from "../../src/documents/documents.module";
+import { MatchingService } from "../../src/matching/matching.module";
+import { missionSelect } from "../../src/missions/missions.service";
 import { RppsService, RppsResult } from "../../src/profiles/rpps";
 import { test, before as beforeAll, after as afterAll } from "node:test";
 import { expect } from "expect";
@@ -113,6 +120,7 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
       .send(profile)
       .expect(200);
   }
+  await post(n, "internal/automation/reminders").expect(401);
   const dto = {
     ...slot,
     agencyId: agency.org,
@@ -142,8 +150,8 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     "UPDATE profile SET rpps_status='FOUND',rpps_number='10000000001' WHERE user_id IN($1,$2)",
     [n.id, n2.id],
   );
-  await db.transaction(em=>queueProfileMatches(em,n.id));
-  const matches = await n.agent.get("/api/v1/me/matches").expect(200);
+  await db.transaction((em) => queueProfileMatches(em, n.id));
+  const matches = await n.agent.get("/api/v1/me/matches?limit=50").expect(200);
   const explanation = matches.body.items.find((x: any) => x.missionId === id);
   expect(explanation.historyStatus).toBe("SAVED");
   const saved = await n.agent
@@ -161,6 +169,36 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     radiusKm: 30,
   }).expect(201);
   expect(listing.body.items.some((x: any) => x.id === "m_" + id)).toBe(true);
+  const [external] = await db.query(
+    "INSERT INTO external_offer(source,source_id,title,description,url,location_label,qualification,raw_hash,provenance) VALUES('TEST_FIXTURE',$1,'Offre IDE FICTIVE','Donnees synthetiques de test','https://example.invalid/fictif','Paris','IDE','fixture','{\"fictional\":true}') RETURNING id",
+    [randomUUID()],
+  );
+  const common = await post(n, "listings/search", {
+    qualifications: ["IDE"],
+    limit: 50,
+  }).expect(201);
+  expect(
+    common.body.items.find((x: any) => x.id === "e_" + external.id)
+      .applicationMode,
+  ).toBe("REDIRECT");
+  await post(n, "me/favorites", {
+    kind: "EXTERNAL",
+    targetId: external.id,
+  }).expect(201);
+  await post(n, "me/favorites", {
+    kind: "EXTERNAL",
+    targetId: external.id,
+  }).expect(201);
+  await db.query("UPDATE external_offer SET active=false WHERE id=$1", [
+    external.id,
+  ]);
+  const favorites = await n.agent.get("/api/v1/me/favorites").expect(200);
+  expect(
+    favorites.body.filter((x: any) => x.target_id === external.id),
+  ).toHaveLength(1);
+  expect(
+    favorites.body.find((x: any) => x.target_id === external.id).active,
+  ).toBe(false);
   const document = await post(n, "me/documents", {
     mime: "application/pdf",
     contentBase64: Buffer.from("%PDF-1.7 FICTIONAL TEST DOCUMENT").toString(
@@ -174,7 +212,9 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     "SELECT id FROM outbox WHERE event='MatchRequested' AND payload->>'missionId'=$1 ORDER BY created_at DESC LIMIT 1",
     [id],
   );
-  expect(["PROCESSED","ALREADY_PROCESSED"]).toContain((await workflow("matches", opened.id)).status);
+  expect(["PROCESSED", "ALREADY_PROCESSED"]).toContain(
+    (await workflow("matches", opened.id)).status,
+  );
   expect((await workflow("matches", opened.id)).status).toBe(
     "ALREADY_PROCESSED",
   );
@@ -215,6 +255,19 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     }).set("Idempotency-Key", "assign-b"),
   ]);
   expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+  const stale = await n.agent
+    .get("/api/v1/matches/" + explanation.explanationId + "/explanation")
+    .expect(200);
+  expect(stale.body.stale).toBe(true);
+  await app
+    .get(MatchingService)
+    .runs.updateOne(
+      { _id: explanation.explanationId },
+      { $set: { expiresAt: new Date(0) } },
+    );
+  await n.agent
+    .get("/api/v1/matches/" + explanation.explanationId + "/explanation")
+    .expect(404);
   const winner = results.find((r) => r.status === 201)!;
   const winnerApplication = winner.body.application_id,
     winningKey = winnerApplication === a.body.id ? "assign-a" : "assign-b";
@@ -319,6 +372,11 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
   }).expect(201);
   expect(login.headers["set-cookie"][0].split(";")[0]).not.toBe(n.cookie);
   await n.agent.get("/api/v1/auth/me").expect(200);
+  await db.query(
+    "UPDATE session SET expire=now()-interval '1 second' WHERE sess->>'userId'=$1",
+    [n.id],
+  );
+  await n.agent.get("/api/v1/auth/me").expect(401);
 });
 test("CSRF required before registration", async () => {
   await request(app.getHttpServer())
@@ -386,4 +444,103 @@ test("PostgreSQL exclusion is a backstop against overlapping active assignments"
   expect(
     await db.query("SELECT id FROM mission WHERE id=ANY($1)", [ids]),
   ).toHaveLength(0);
+});
+
+test("MongoDB failure returns an explicit degraded result and an audit trace", async () => {
+  const actor = clients.find((c) => !c.org).id;
+  const [p] = await db.query("SELECT * FROM profile WHERE user_id=$1", [actor]);
+  const [m] = await db.query(missionSelect + " ORDER BY m.id LIMIT 1");
+  const service = app.get(MatchingService);
+  await service.connection.close();
+  const result = await service.calculate(actor, m, p, []);
+  expect(result.historyStatus).toBe("UNAVAILABLE");
+  expect(result.explanationId).toBe(null);
+  await expect(
+    service.explanation(actor, "000000000000000000000000"),
+  ).rejects.toMatchObject({ status: 503 });
+  const rows = await db.query(
+    "SELECT id FROM audit WHERE actor_id=$1 AND event='MATCHING_HISTORY_UNAVAILABLE'",
+    [actor],
+  );
+  expect(rows.length).toBeGreaterThan(0);
+});
+
+test("an ended assignment completes atomically and cannot be reopened", async () => {
+  const agency = clients[0],
+    n = clients.find((c) => !c.org);
+  const id = randomUUID();
+  const [template] = await db.query(
+    "SELECT id FROM mission WHERE agency_id=$1 LIMIT 1",
+    [agency.org],
+  );
+  await db.transaction(async (em) => {
+    await em.query(
+      "INSERT INTO mission(id,agency_id,establishment_id,title,description,qualification,service,population,block,required_skills,desired_skills,min_experience_months,start_at,end_at,shift,address,location,hourly_salary,status) SELECT $1,agency_id,establishment_id,'FICTIF ended mission',description,qualification,service,population,block,required_skills,desired_skills,min_experience_months,now()-interval '2 hours',now()-interval '1 hour',shift,address,location,hourly_salary,'FILLED' FROM mission WHERE id=$2",
+      [id, template.id],
+    );
+    const [a] = await em.query(
+      "INSERT INTO application(mission_id,nurse_id,consent_version,status) VALUES($1,$2,1,'ACCEPTED') RETURNING id",
+      [id, n.id],
+    );
+    await em.query(
+      "INSERT INTO assignment(mission_id,nurse_id,application_id,start_at,end_at) SELECT id,$2,$3,start_at,end_at FROM mission WHERE id=$1",
+      [id, n.id, a.id],
+    );
+  });
+  await post(agency, "missions/" + id + "/complete").expect(201);
+  const [row] = await db.query(
+    "SELECT m.status AS mission,a.status AS assignment FROM mission m JOIN assignment a ON a.mission_id=m.id WHERE m.id=$1",
+    [id],
+  );
+  expect(row).toEqual({ mission: "COMPLETED", assignment: "COMPLETED" });
+  await post(agency, "missions/" + id + "/reopen").expect(409);
+});
+
+test("document key rotation reads previous versions and writes the active version", async () => {
+  const actor = clients.find((c) => !c.org).id;
+  const original = process.env.DOCUMENT_KEY!,
+    version = process.env.DOCUMENT_KEY_VERSION,
+    previous = process.env.DOCUMENT_KEY_V1;
+  const [old] = await db.query(
+    "SELECT id FROM document WHERE owner_id=$1 AND kind='EVIDENCE' AND status='READY' LIMIT 1",
+    [actor],
+  );
+  let created: string | undefined;
+  try {
+    process.env.DOCUMENT_KEY_VERSION = "2";
+    process.env.DOCUMENT_KEY_V1 = original;
+    process.env.DOCUMENT_KEY = randomBytes(32).toString("base64");
+    const rotated = new DocumentsService(db);
+    expect(
+      (await rotated.read(actor, old.id)).data.subarray(0, 5).toString(),
+    ).toBe("%PDF-");
+    const content = Buffer.from("%PDF-1.7 FICTIONAL ROTATION TEST");
+    const result = await rotated.store(
+      actor,
+      "EVIDENCE",
+      "application/pdf",
+      content,
+    );
+    created = result.id;
+    expect((await rotated.read(actor, created)).data).toEqual(content);
+    expect(
+      (
+        await db.query("SELECT key_version FROM document WHERE id=$1", [
+          created,
+        ])
+      )[0].key_version,
+    ).toBe(2);
+  } finally {
+    process.env.DOCUMENT_KEY = original;
+    if (version === undefined) delete process.env.DOCUMENT_KEY_VERSION;
+    else process.env.DOCUMENT_KEY_VERSION = version;
+    if (previous === undefined) delete process.env.DOCUMENT_KEY_V1;
+    else process.env.DOCUMENT_KEY_V1 = previous;
+    if (created) {
+      await db.query("DELETE FROM document WHERE id=$1", [created]);
+      await rm(resolve(projectRoot, "data/documents", created + ".bin"), {
+        force: true,
+      });
+    }
+  }
 });

@@ -1,3 +1,4 @@
+import { retryTransaction } from "../common/retry";
 import { Global, Injectable, Module, OnModuleDestroy } from "@nestjs/common";
 import { DataSource, EntityManager } from "typeorm";
 import { required } from "../config";
@@ -26,11 +27,13 @@ export class Database implements OnModuleDestroy {
     return queryRows(await this.source.query(sql, parameters));
   }
   transaction<T>(fn: (em: SqlClient) => Promise<T>): Promise<T> {
-    return this.source.transaction((em) =>
-      fn({
-        query: async (sql, parameters = []) =>
-          queryRows(await em.query(sql, parameters)),
-      }),
+    return retryTransaction(() =>
+      this.source.transaction((em) =>
+        fn({
+          query: async (sql, parameters = []) =>
+            queryRows(await em.query(sql, parameters)),
+        }),
+      ),
     );
   }
   async onModuleDestroy() {
@@ -76,6 +79,9 @@ function queryRows(result: any): any[] {
     : result;
 }
 
-export async function queueProfileMatches(em:SqlClient,actor:string){
- await em.query("INSERT INTO outbox(event,payload) SELECT 'MatchRequested',jsonb_build_object('missionId',m.id,'version',m.version,'profileId',$1::uuid) FROM mission m JOIN profile p ON p.user_id=$1 WHERE m.status='OPEN' AND m.end_at>now() AND m.qualification=ANY(p.qualifications)",[actor]);
+export async function queueProfileMatches(em: SqlClient, actor: string) {
+  await em.query(
+    "INSERT INTO outbox(event,payload) SELECT 'MatchRequested',jsonb_build_object('missionId',m.id,'version',m.version,'profileId',$1::uuid) FROM mission m JOIN profile p ON p.user_id=$1 WHERE m.status='OPEN' AND m.end_at>now() AND m.qualification=ANY(p.qualifications)",
+    [actor],
+  );
 }

@@ -8,3 +8,5 @@
 *.yaml text eol=lf
 *.pdf binary
 *.docx binary
+*.txt text eol=lf
+*.csv text eol=lf

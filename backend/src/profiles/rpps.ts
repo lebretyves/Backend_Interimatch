@@ -82,7 +82,7 @@ export class RppsService {
       );
       if (!rows.length) return { status: "STALE_RESULT_IGNORED" };
       await audit(em, actor, "RPPS_RESULT", actor, { version, ...result });
-      await queueProfileMatches(em,actor);
+      await queueProfileMatches(em, actor);
       return result;
     });
   }

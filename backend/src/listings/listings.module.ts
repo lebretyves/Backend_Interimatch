@@ -45,21 +45,45 @@ class ListingsController {
     if (b.qualifications.some((q) => !p.qualifications.includes(q)))
       throw new BadRequestException("Qualification not held");
     const q = searchSql(b);
-    const rows = await this.db.query(missionSelect + q.sql, q.values);
+    const parameters = [...q.parameters];
+    const bind = (value: unknown) => {
+      parameters.push(value);
+      return "$" + parameters.length;
+    };
+    const externalQualifications = b.qualifications.filter((qualification) => {
+      if (qualification === "IDE") return !b.ideServices?.length;
+      const prefix = qualification.toLowerCase();
+      return !["Population", "Blocks", "Specialties"].some(
+        (s) => (b as any)[prefix + s]?.length,
+      );
+    });
+    const strictUnknown = Boolean(
+      b.start ||
+      b.end ||
+      b.radiusKm !== undefined ||
+      b.shifts?.length ||
+      b.establishmentId,
+    );
+    const externalWhere = strictUnknown
+      ? "false"
+      : "e.active AND (e.expires_at IS NULL OR e.expires_at>now()) AND e.qualification=ANY(" +
+        bind(externalQualifications) +
+        ")";
+    const sql =
+      "SELECT data FROM (SELECT 'm_'||m.id AS listing_id,m.created_at AS listed_at,(to_jsonb(m)-'location')||jsonb_build_object('id','m_'||m.id,'kind','INTERNAL_MISSION','latitude',ST_Y(m.location::geometry),'longitude',ST_X(m.location::geometry),'salary',jsonb_build_object('amount',m.hourly_salary,'currency','EUR','unit','HOUR','gross',true)) AS data FROM mission m WHERE " +
+      q.where +
+      " UNION ALL SELECT 'e_'||e.id,e.imported_at,(to_jsonb(e)-'raw_hash')||jsonb_build_object('id','e_'||e.id,'kind','EXTERNAL_OFFER','applicationMode','REDIRECT','eligibility','INCOMPLETE') FROM external_offer e WHERE " +
+      externalWhere +
+      ") listings ORDER BY listed_at DESC,listing_id LIMIT " +
+      bind(b.limit ?? 20) +
+      " OFFSET " +
+      bind(b.offset ?? 0);
+    const rows = await this.db.query(sql, parameters);
     return {
-      items: rows.map((m) => ({
-        ...m,
-        id: "m_" + m.id,
-        kind: "INTERNAL_MISSION",
-        salary: {
-          amount: m.hourly_salary,
-          currency: "EUR",
-          unit: "HOUR",
-          gross: true,
-        },
-      })),
+      items: rows.map((r) => r.data),
       limit: b.limit ?? 20,
       offset: b.offset ?? 0,
+      unknownExternalFieldsExcluded: strictUnknown,
     };
   }
   @Get("listings/external") async external() {
@@ -78,7 +102,12 @@ class ListingsController {
     };
   }
   @Get("listings/:id") async detail(@Param("id") id: string) {
-    if (!/^[me]_[0-9a-f-]{36}$/i.test(id)) throw new NotFoundException();
+    if (
+      !/^[me]_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      )
+    )
+      throw new NotFoundException();
     if (id.startsWith("e_")) {
       const [e] = await this.db.query(
         "SELECT * FROM external_offer WHERE id=$1",

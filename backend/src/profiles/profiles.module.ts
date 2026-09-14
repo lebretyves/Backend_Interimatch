@@ -1,3 +1,4 @@
+import { geodesicKm } from "../database/distance";
 import { ApiProperty } from "@nestjs/swagger";
 import {
   Body,
@@ -189,10 +190,14 @@ export class ProfilesService {
         rppsStatus: "FOUND",
       };
       for (const m of active) {
-        const evaluation = match(proposed, {
-          ...matchingMission(m),
-          status: "OPEN",
-        });
+        const evaluation = match(
+          proposed,
+          {
+            ...matchingMission(m),
+            status: "OPEN",
+          },
+          await geodesicKm(em, b, m),
+        );
         if (!evaluation.eligible)
           throw new ConflictException({
             code: "ACTIVE_ASSIGNMENT_INCOMPATIBLE",
@@ -227,7 +232,7 @@ export class ProfilesService {
           [actor, code],
         );
       await audit(em, actor, "PROFILE_UPDATED", actor);
-      await queueProfileMatches(em,actor);
+      await queueProfileMatches(em, actor);
       return { ok: true };
     });
   }

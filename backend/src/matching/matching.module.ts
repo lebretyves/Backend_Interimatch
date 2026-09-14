@@ -1,3 +1,6 @@
+import { MATCH_RULES } from "../domain/rules";
+import { geodesicKm } from "../database/distance";
+import { PageDto } from "../common/page.dto";
 import {
   Controller,
   Get,
@@ -30,6 +33,7 @@ const runSchema = new mongoose.Schema(
     missionId: { type: String, required: true },
     profileVersion: { type: String, required: true },
     missionVersion: { type: Number, required: true },
+    missionStatus: { type: String, required: true },
     rulesVersion: { type: String, required: true },
     result: { type: mongoose.Schema.Types.Mixed, required: true },
     expiresAt: { type: Date, required: true },
@@ -44,18 +48,33 @@ export class MatchingService implements OnModuleDestroy {
     serverSelectionTimeoutMS: 2000,
   });
   readonly runs = this.connection.model("MatchingRun", runSchema);
+  private readonly retentionDays = Number(
+    process.env.MATCHING_RETENTION_DAYS ?? 30,
+  );
   constructor(private readonly db: Database) {
+    if (
+      !Number.isInteger(this.retentionDays) ||
+      this.retentionDays < 1 ||
+      this.retentionDays > 365
+    )
+      throw new Error("Invalid matching retention");
     this.connection.on("error", () => {});
   }
   async ready() {
     await this.connection.asPromise();
+    if (this.connection.readyState !== 1)
+      throw new Error("MONGO_NOT_CONNECTED");
     await this.runs.init();
   }
   async onModuleDestroy() {
     await this.connection.close();
   }
   async calculate(owner: string, m: any, p: any, conflicts: any[]) {
-    const result = match(professional(p, conflicts), matchingMission(m));
+    const result = match(
+      professional(p, conflicts),
+      matchingMission(m),
+      await geodesicKm(this.db, p, m),
+    );
     try {
       await this.ready();
       const run = await this.runs.create({
@@ -64,9 +83,10 @@ export class MatchingService implements OnModuleDestroy {
         profileVersion:
           new Date(p.updated_at).toISOString() + ":" + p.rpps_version,
         missionVersion: m.version,
-        rulesVersion: "1.0.0",
+        missionStatus: m.status,
+        rulesVersion: MATCH_RULES.version,
         result,
-        expiresAt: new Date(Date.now() + 30 * 86400000),
+        expiresAt: new Date(Date.now() + this.retentionDays * 86400000),
       });
       return {
         ...result,
@@ -75,6 +95,10 @@ export class MatchingService implements OnModuleDestroy {
         historyStatus: "SAVED",
       };
     } catch {
+      await this.db.query(
+        "INSERT INTO audit(actor_id,event,resource_id) VALUES($1,'MATCHING_HISTORY_UNAVAILABLE',$2)",
+        [owner, m.id],
+      );
       return {
         ...result,
         missionId: m.id,
@@ -83,64 +107,96 @@ export class MatchingService implements OnModuleDestroy {
       };
     }
   }
-  async forNurse(actor: string) {
+  async forNurse(actor: string, page: PageDto = new PageDto()) {
     const [p] = await this.db.query("SELECT * FROM profile WHERE user_id=$1", [
       actor,
     ]);
     if (!p) throw new NotFoundException();
-    const missions = await this.db.query(
-      missionSelect +
-        " WHERE m.status='OPEN' AND m.end_at>now() AND m.qualification=ANY($1) ORDER BY m.start_at,m.id LIMIT 50",
-      [p.qualifications],
-    );
     const conflicts = await this.db.query(
       "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
       [actor],
     );
-    const results = [];
-    for (const m of missions)
-      results.push(await this.calculate(actor, m, p, conflicts));
-    return {
-      items: results.sort(
-        (a, b) =>
-          (b.score ?? -1) - (a.score ?? -1) ||
-          a.missionId.localeCompare(b.missionId),
-      ),
-      limit: 50,
-    };
+    let cursor = "00000000-0000-0000-0000-000000000000",
+      scanned = 0;
+    const top: any[] = [];
+    const compare = (a: any, b: any) =>
+      (b.result.score ?? -1) - (a.result.score ?? -1) ||
+      new Date(a.m.start_at).getTime() - new Date(b.m.start_at).getTime() ||
+      a.m.id.localeCompare(b.m.id);
+    while (true) {
+      const batch = await this.db.query(
+        missionSelect +
+          " WHERE m.status='OPEN' AND m.end_at>now() AND m.qualification=ANY($1) AND m.id>$2::uuid ORDER BY m.id LIMIT 100",
+        [p.qualifications, cursor],
+      );
+      if (!batch.length) break;
+      for (const m of batch) {
+        top.push({
+          m,
+          result: match(
+            professional(p, conflicts),
+            matchingMission(m),
+            await geodesicKm(this.db, p, m),
+          ),
+        });
+        top.sort(compare);
+        if (top.length > page.offset + page.limit) top.pop();
+        scanned++;
+      }
+      cursor = batch[batch.length - 1].id;
+    }
+    const items = [];
+    for (const item of top.slice(page.offset))
+      items.push(await this.calculate(actor, item.m, p, conflicts));
+    return { items, limit: page.limit, offset: page.offset, total: scanned };
   }
-  async forMission(actor: string, id: string) {
+  async forMission(actor: string, id: string, page: PageDto = new PageDto()) {
     const m = await this.db.transaction(async (em) => {
       const [m] = await em.query(missionSelect + " WHERE m.id=$1", [id]);
       if (!m) throw new NotFoundException();
       await scope(em, actor, m);
       return m;
     });
-    const profiles = await this.db.query(
-      "SELECT * FROM profile WHERE visible AND $1=ANY(qualifications) ORDER BY user_id LIMIT 50",
-      [m.qualification],
-    );
-    const out = [];
-    for (const p of profiles) {
-      const conflicts = await this.db.query(
-        "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
-        [p.user_id],
+    let cursor = "00000000-0000-0000-0000-000000000000",
+      scanned = 0;
+    const top: any[] = [];
+    while (true) {
+      const batch = await this.db.query(
+        "SELECT * FROM profile WHERE visible AND $1=ANY(qualifications) AND user_id>$2::uuid ORDER BY user_id LIMIT 100",
+        [m.qualification, cursor],
       );
-      const result = match(professional(p, conflicts), matchingMission(m));
-      out.push({
-        candidateId: p.user_id,
-        qualifications: p.qualifications,
-        skills: p.skills,
-        ...result,
-      });
+      if (!batch.length) break;
+      for (const p of batch) {
+        const conflicts = await this.db.query(
+          "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
+          [p.user_id],
+        );
+        const result = match(
+          professional(p, conflicts),
+          matchingMission(m),
+          await geodesicKm(this.db, p, m),
+        );
+        top.push({
+          candidateId: p.user_id,
+          qualifications: p.qualifications,
+          skills: p.skills,
+          ...result,
+        });
+        top.sort(
+          (a, b) =>
+            (b.score ?? -1) - (a.score ?? -1) ||
+            a.candidateId.localeCompare(b.candidateId),
+        );
+        if (top.length > page.offset + page.limit) top.pop();
+        scanned++;
+      }
+      cursor = batch[batch.length - 1].user_id;
     }
     return {
-      items: out.sort(
-        (a, b) =>
-          (b.score ?? -1) - (a.score ?? -1) ||
-          a.candidateId.localeCompare(b.candidateId),
-      ),
-      limit: 50,
+      items: top.slice(page.offset),
+      limit: page.limit,
+      offset: page.offset,
+      total: scanned,
     };
   }
   async explanation(actor: string, id: string) {
@@ -156,11 +212,14 @@ export class MatchingService implements OnModuleDestroy {
     }
     if (!run) throw new NotFoundException();
     const [current] = await this.db.query(
-      "SELECT p.updated_at,p.rpps_version,m.version FROM profile p CROSS JOIN mission m WHERE p.user_id=$1 AND m.id=$2",
+      "SELECT p.updated_at,p.rpps_version,m.version,m.status,m.end_at FROM profile p CROSS JOIN mission m WHERE p.user_id=$1 AND m.id=$2",
       [actor, run.missionId],
     );
     const stale =
       !current ||
+      run.rulesVersion !== MATCH_RULES.version ||
+      run.missionStatus !== current.status ||
+      new Date(current.end_at).getTime() <= Date.now() ||
       run.profileVersion !==
         new Date(current.updated_at).toISOString() +
           ":" +
@@ -173,14 +232,15 @@ export class MatchingService implements OnModuleDestroy {
 @UseGuards(SessionGuard)
 class MatchingController {
   constructor(private readonly service: MatchingService) {}
-  @Get("me/matches") matches(@Req() r: Request) {
-    return this.service.forNurse(user(r));
+  @Get("me/matches") matches(@Req() r: Request, @Query() page: PageDto) {
+    return this.service.forNurse(user(r), page);
   }
   @Get("missions/:id/candidates") candidates(
     @Req() r: Request,
     @Param("id", ParseUUIDPipe) id: string,
+    @Query() page: PageDto,
   ) {
-    return this.service.forMission(user(r), id);
+    return this.service.forMission(user(r), id, page);
   }
   @Get("matches/:id/explanation") explanation(
     @Req() r: Request,

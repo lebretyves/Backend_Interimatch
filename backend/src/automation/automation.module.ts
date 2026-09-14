@@ -1,3 +1,4 @@
+import { geodesicKm } from "../database/distance";
 import {
   Injectable,
   Controller,
@@ -47,21 +48,32 @@ export class AutomationService {
       if (receipt.length) return { status: "ALREADY_PROCESSED" };
       let count = 0;
       if (m.status === "OPEN" && m.version === e.payload.version) {
-        const profiles = await em.query(
-          "SELECT * FROM profile WHERE visible AND notifications_enabled AND $1=ANY(qualifications) AND ($2::uuid IS NULL OR user_id=$2) ORDER BY user_id LIMIT 200 FOR UPDATE",
-          [m.qualification,e.payload.profileId??null],
-        );
-        for (const p of profiles) {
-          const conflicts = await em.query(
-            "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
-            [p.user_id],
+        let cursor = "00000000-0000-0000-0000-000000000000";
+        while (true) {
+          const profiles = await em.query(
+            "SELECT * FROM profile WHERE visible AND notifications_enabled AND $1=ANY(qualifications) AND ($2::uuid IS NULL OR user_id=$2) AND user_id>$3::uuid ORDER BY user_id LIMIT 100 FOR UPDATE",
+            [m.qualification, e.payload.profileId ?? null, cursor],
           );
-          if (match(professional(p, conflicts), matchingMission(m)).eligible) {
-            await em.query(
-              "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'MATCH','Une mission compatible est disponible.') ON CONFLICT DO NOTHING",
-              [p.user_id, id],
+          if (!profiles.length) break;
+          cursor = profiles[profiles.length - 1].user_id;
+          for (const p of profiles) {
+            const conflicts = await em.query(
+              "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
+              [p.user_id],
             );
-            count++;
+            if (
+              match(
+                professional(p, conflicts),
+                matchingMission(m),
+                await geodesicKm(em, p, m),
+              ).eligible
+            ) {
+              await em.query(
+                "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'MATCH','Une mission compatible est disponible.') ON CONFLICT DO NOTHING",
+                [p.user_id, id],
+              );
+              count++;
+            }
           }
         }
       }
@@ -76,45 +88,51 @@ export class AutomationService {
     const delay = Number(process.env.REMINDER_DELAY_MINUTES ?? 60);
     if (!Number.isFinite(delay) || delay < 0)
       throw new Error("Invalid reminder delay");
-    return this.db.transaction(async (em) => {
-      const missions = await em.query(
-        "SELECT * FROM mission WHERE status='OPEN' AND start_at>now() AND created_at<now()-make_interval(mins=>$1) ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED",
-        [Math.floor(delay)],
-      );
-      let count = 0;
-      for (const m of missions) {
+    let notifications = 0;
+    while (true) {
+      const batch = await this.db.transaction(async (em) => {
         const window = new Date().toISOString().slice(0, 13);
-        const [existing] = await em.query(
-          "SELECT 1 FROM reminder_window WHERE mission_id=$1 AND version=$2 AND window_key=$3",
-          [m.id, m.version, window],
+        const missions = await em.query(
+          "SELECT * FROM mission WHERE status='OPEN' AND start_at>now() AND created_at<now()-make_interval(mins=>$1) AND NOT EXISTS(SELECT 1 FROM reminder_window w WHERE w.mission_id=mission.id AND w.version=mission.version AND w.window_key=$2) ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED",
+          [Math.floor(delay), window],
         );
-        if (existing) continue;
-        const [e] = await em.query(
-          "INSERT INTO outbox(event,payload,completed_at) VALUES('ReminderCreated',$1,now()) RETURNING id",
-          [JSON.stringify({ missionId: m.id, version: m.version })],
-        );
-        const members = await em.query(
-          "SELECT user_id FROM membership WHERE organization_id=$1 AND active FOR SHARE",
-          [m.agency_id],
-        );
-        for (const actor of members) {
-          await em.query(
-            "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'REMINDER','Une mission reste à pourvoir.') ON CONFLICT DO NOTHING",
-            [actor.user_id, e.id],
+        let count = 0;
+        for (const m of missions) {
+          const [existing] = await em.query(
+            "SELECT 1 FROM reminder_window WHERE mission_id=$1 AND version=$2 AND window_key=$3",
+            [m.id, m.version, window],
           );
-          count++;
+          if (existing) continue;
+          const [e] = await em.query(
+            "INSERT INTO outbox(event,payload,completed_at) VALUES('ReminderCreated',$1,now()) RETURNING id",
+            [JSON.stringify({ missionId: m.id, version: m.version })],
+          );
+          const members = await em.query(
+            "SELECT user_id FROM membership WHERE organization_id=$1 AND active FOR SHARE",
+            [m.agency_id],
+          );
+          for (const actor of members) {
+            await em.query(
+              "INSERT INTO notification(user_id,event_id,kind,message) VALUES($1,$2,'REMINDER','Une mission reste à pourvoir.') ON CONFLICT DO NOTHING",
+              [actor.user_id, e.id],
+            );
+            count++;
+          }
+          await em.query(
+            "INSERT INTO reminder_window(mission_id,version,window_key,event_id) VALUES($1,$2,$3,$4)",
+            [m.id, m.version, window, e.id],
+          );
+          await em.query(
+            "INSERT INTO workflow_receipt(event_id,action) VALUES($1,'reminder')",
+            [e.id],
+          );
         }
-        await em.query(
-          "INSERT INTO reminder_window(mission_id,version,window_key,event_id) VALUES($1,$2,$3,$4)",
-          [m.id, m.version, window, e.id],
-        );
-        await em.query(
-          "INSERT INTO workflow_receipt(event_id,action) VALUES($1,'reminder')",
-          [e.id],
-        );
-      }
-      return { status: "PROCESSED", notifications: count };
-    });
+        return { selected: missions.length, notifications: count };
+      });
+      notifications += batch.notifications;
+      if (batch.selected === 0) break;
+    }
+    return { status: "PROCESSED", notifications };
   }
   async confirmation(id: string) {
     const reservation = await this.db.transaction(async (em) => {
@@ -262,7 +280,8 @@ export class AutomationService {
     });
     const results = [];
     for (const e of events) {
-      const action = e.event === "AssignmentCreated" ? "confirmation" : "matches";
+      const action =
+        e.event === "AssignmentCreated" ? "confirmation" : "matches";
       try {
         const response = await fetch(
           required("N8N_WEBHOOK_BASE") + "/" + action,

@@ -227,5 +227,10 @@ export function searchSql(b: SearchDto) {
     bind(b.limit ?? 20) +
     " OFFSET " +
     bind(b.offset ?? 0);
-  return { sql, values };
+  return {
+    sql,
+    values,
+    where: filters.join(" AND "),
+    parameters: values.slice(0, -2),
+  };
 }

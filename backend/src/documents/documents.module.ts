@@ -104,6 +104,66 @@ export class DocumentsService {
     });
     return { id, status: "READY" };
   }
+  async reconcile(minimumAgeMinutes = 5) {
+    if (
+      !Number.isInteger(minimumAgeMinutes) ||
+      minimumAgeMinutes < 0 ||
+      minimumAgeMinutes > 1440
+    )
+      throw new BadRequestException("Invalid reconciliation age");
+    let cursor = "00000000-0000-0000-0000-000000000000",
+      recovered = 0,
+      pending = 0;
+    while (true) {
+      const batch = await this.db.query(
+        "SELECT id FROM document WHERE status='STAGING' AND created_at<=now()-make_interval(mins=>$1) AND id>$2::uuid ORDER BY id LIMIT 100",
+        [minimumAgeMinutes, cursor],
+      );
+      if (!batch.length) break;
+      for (const item of batch) {
+        const ready = await this.db.transaction(async (em) => {
+          const [d] = await em.query(
+            "SELECT * FROM document WHERE id=$1 AND status='STAGING' FOR UPDATE",
+            [item.id],
+          );
+          if (!d) return false;
+          try {
+            let encrypted: Buffer;
+            let temporary = false;
+            try {
+              encrypted = await readFile(
+                resolve(this.directory, d.id + ".bin"),
+              );
+            } catch (e: any) {
+              if (e.code !== "ENOENT") throw e;
+              encrypted = await readFile(
+                resolve(this.directory, d.id + ".tmp"),
+              );
+              temporary = true;
+            }
+            const clear = decrypt(encrypted, this.key(d.key_version), d.id);
+            if (clear.length !== d.size_bytes) throw new Error("SIZE_MISMATCH");
+            if (temporary)
+              await rename(
+                resolve(this.directory, d.id + ".tmp"),
+                resolve(this.directory, d.id + ".bin"),
+              );
+            await em.query("UPDATE document SET status='READY' WHERE id=$1", [
+              d.id,
+            ]);
+            await audit(em, null, "DOCUMENT_RECOVERED", d.id);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+        if (ready) recovered++;
+        else pending++;
+      }
+      cursor = batch[batch.length - 1].id;
+    }
+    return { recovered, pending };
+  }
   async read(actor: string, id: string) {
     const doc = await this.db.transaction(async (em) => {
       const [d] = await em.query(

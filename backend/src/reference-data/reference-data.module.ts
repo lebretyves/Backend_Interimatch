@@ -1,3 +1,4 @@
+import { MATCH_RULES } from "../domain/rules";
 import { Controller, Get, Module } from "@nestjs/common";
 export const ideServices = [
   "CARDIOLOGIE",
@@ -79,10 +80,7 @@ class ReferenceController {
         branches: "OR",
         dateWindow: "OVERLAP",
       },
-      matching: {
-        version: "1.0.0",
-        weights: { C: 0.45, Z: 0.25, D: 0.2, E: 0.1 },
-      },
+      matching: MATCH_RULES,
       limits: {
         pageSize: 20,
         maxPageSize: 50,

@@ -1,3 +1,4 @@
+import { geodesicKm } from "../database/distance";
 import {
   Injectable,
   NotFoundException,
@@ -54,7 +55,11 @@ export async function eligible(em: SqlClient, p: any, m: any) {
     "SELECT start_at,end_at FROM assignment WHERE nurse_id=$1 AND status='ACTIVE'",
     [p.user_id],
   );
-  const result = match(professional(p, conflicts), matchingMission(m));
+  const result = match(
+    professional(p, conflicts),
+    matchingMission(m),
+    await geodesicKm(em, p, m),
+  );
   if (!result.eligible)
     throw new ConflictException({
       code: "INELIGIBLE",

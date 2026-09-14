@@ -103,3 +103,17 @@ verify exécute typecheck, build et coverage et enregistre les sorties dans docs
 Les justificatifs utilisent AES-256-GCM, un nonce aléatoire et un contexte lié à leur identifiant. Les fichiers sont privés dans data/documents. DOCUMENT_KEY_VERSION vaut 1 par défaut ; lors d'une rotation, les anciennes clés sont fournies par DOCUMENT_KEY_V1, etc. Ne pas retirer une ancienne clé tant que des documents l'utilisent. Aucun mécanisme ne sauvegarde en clair en cas d'échec. Le RIB de démo emploie un identifiant volontairement non bancaire comportant DEMO ; il est masqué en lecture.
 
 Compose est un environnement local, avec ports liés à 127.0.0.1. HTTPS/TLS interservices, rôles SQL/Mongo de production et restauration complète ne sont pas encore validés : ne pas exposer ce déploiement tel quel sur Internet.
+
+## Paramètres et récupération après interruption
+
+MATCHING_RETENTION_DAYS configure la rétention des explications (30 par défaut, entre 1 et 365). MATCHING_WEIGHTS_JSON permet une configuration C/Z/D/E totalisant 1 ; l'empreinte des pondérations entre dans la version visible des règles. Une explication d'une ancienne version est signalée périmée.
+
+Les recommandations et candidats utilisent limit (20 par défaut, maximum 50) et offset ; le classement porte sur l'ensemble des résultats parcourus par lots. Les distances des décisions utilisent PostGIS comme la recherche.
+
+Après une interruption pendant l'enregistrement d'un fichier, exécuter :
+
+```powershell
+node backend/dist/cli.js reconcile-documents --minimum-age-minutes 5
+```
+
+La commande ne rend READY qu'un fichier dont le chiffrement et la taille ont été vérifiés. Un fichier absent, une clé manquante ou un tag invalide laisse le document en attente. Le rapport livré est aussi disponible dans [coverage-report.zip](docs/proofs/coverage-report.zip).
