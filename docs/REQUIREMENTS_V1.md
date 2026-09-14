@@ -25,7 +25,7 @@ La nouvelle numérotation du [catalogue Word](references/Interimatch_Sante_Catal
 | F12 | Trois workflows n8n : notification de match, relance, confirmation PDF fictive après affectation humaine | automation, workflows | Trois workflows exécutés ; reprises après crash/expiration concurrente à compléter |
 | F15 | Acquisition publique réelle, nettoyage, provenance, dédoublonnage et import rejouable | public-data/offers, cli | Partiel ; accès réel, persistance et rejeu vérifiés dans proofs/france-travail-live.json |
 | F17 | Créer, modifier, publier, annuler, rouvrir et clôturer une mission selon droits et états | missions | Partiel ; transitions critiques testées ; recette complète des commandes restante |
-| F18 | RPPS exact FOUND satisfait le contrôle ; NOT_FOUND bloque ; panne PENDING ; retour tardif ignoré | profiles/rpps | Bloqué fournisseur ; cas simulés testés, ANS réel à valider |
+| F18 | RPPS exact FOUND satisfait le contrôle ; NOT_FOUND bloque ; panne PENDING ; retour tardif ignoré | profiles/rpps | Partiel ; accès ANS réel et cas NOT_FOUND testés, cas FOUND réel restant |
 | F19 | Tableau agence, candidats, sélection/refus puis affectation humaine atomique | missions, matching, listings | Partiel ; affectation, idempotence et exclusion SQL testées ; intégration écran restante |
 | F20 | Données publiques nettoyées visibles avec provenance et exemple avant/après | public-data, listings | Partiel ; import réel vérifié, affichage frontend restant |
 | F22 | Justificatif fictif contrôlé, chiffré au repos, téléchargement réservé aux personnes autorisées | documents | Testé sur scénarios ; altération, rotation de clé et reprise STAGING ; restauration complète restante |
@@ -80,3 +80,9 @@ France Travail : authentification et import reels reussis, 50 offres du lot relu
 48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
 
 Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
+
+## Acces ANS/FHIR verifie le 15 septembre 2026
+
+La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
+
+Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.

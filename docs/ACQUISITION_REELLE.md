@@ -1,6 +1,6 @@
 # Acquisition réelle : France Travail et FINESS
 
-État du 15 septembre 2026. Ces résultats remplacent les anciens constats de blocage d'accès France Travail. L'API ANS/FHIR RPPS reste à tester séparément.
+État du 15 septembre 2026. Ces résultats remplacent les anciens constats de blocage d'accès France Travail. L’accès ANS/FHIR est testé ; le contrôle positif d’un professionnel reste à valider.
 
 ## France Travail
 
@@ -52,3 +52,9 @@ Le test HTTP vérifie pagination, format invalide, numéro corse, absence dans l
 L'absence dans un snapshot daté n'est pas une preuve d'absence actuelle au niveau national. L'inscription ne devient pas automatiquement bloquante sur FINESS : la présente intégration fournit le contrôle de présence et les données à utiliser dans le parcours frontend. L'API de vérification RPPS reste indépendante.
 
 Le fichier brut n'entre pas dans le bundle Git ; il doit être conservé séparément ou téléchargé à nouveau à l'URL enregistrée. Le premier essai de chargement en mémoire a échoué sur la limite de chaîne Node ; la lecture en flux a corrigé ce problème avant l'import réussi.
+
+## Acces ANS/FHIR verifie le 15 septembre 2026
+
+La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
+
+Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.

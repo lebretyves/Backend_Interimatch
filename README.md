@@ -140,3 +140,13 @@ France Travail : authentification et import reels reussis, 50 offres du lot relu
 Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
 
 Les instructions completes d’import FINESS et les preuves fournisseurs sont dans [ACQUISITION_REELLE.md](docs/ACQUISITION_REELLE.md).
+
+## Acces ANS/FHIR verifie le 15 septembre 2026
+
+La cle configuree a permis un appel reel a Practitioner : HTTP 200, Bundle FHIR de recherche et resultat NOT_FOUND sur le numero synthetique 00000000000. Aucun profil n'a ete modifie. Ce test valide l'acces et le cas absence, pas le cas FOUND sur un professionnel reel. Preuve : docs/proofs/ans-fhir-live.json (proofs/ans-fhir-live.json depuis docs).
+
+Les anciens constats de cle manquante sont historiques. Restent notamment le controle positif sur un RPPS reel autorise et la recette complete du parcours. La cle et les fichiers .env restent exclus de Git.
+
+## Sauvegarde GitHub
+
+Depot : https://github.com/lebretyves/Backend_Interimatch ; branche master. Apres verification et commit : `git push origin master`, puis `npm run snapshot` pour le bundle local. Git sauvegarde le code et la documentation, pas les cles, bases ni fichiers locaux ignores.
