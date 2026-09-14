@@ -1,3 +1,4 @@
+import { FINESS_PATTERN } from "../reference-data/finess";
 import { ApiProperty } from "@nestjs/swagger";
 import {
   Body,
@@ -39,7 +40,7 @@ class OrganizationDto {
   referent!: string;
   @ApiProperty({ type: () => String, required: false })
   @IsOptional()
-  @Matches(/^\d{9}$/)
+  @Matches(FINESS_PATTERN)
   finess?: string;
   @ApiProperty({ type: () => String, required: false })
   @IsOptional()

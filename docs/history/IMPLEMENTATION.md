@@ -35,3 +35,11 @@
 ## Synchronisation documentaire du 14 septembre 2026
 
 README et REQUIREMENTS_V1.md relient les exigences, preuves, architecture et flux. Le plan décrit maintenant les fichiers présents. Les archives sources et le code restent inchangés ; les 44 tests renvoient au commit 28923fc. Les limites de recette, fournisseurs et production sont conservées.
+
+## Actualisation des acces fournisseurs
+
+France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](../ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
+
+## FINESS et fournisseurs - 15 septembre 2026
+
+Acces France Travail reel teste. Source FINESS fournie puis snapshot officiel telecharge et importe. Premiere lecture JSON en memoire en echec sur la limite de chaine Node, remplacee par une lecture en flux avec empreinte. Migration additive Finess1789380300000. Correction des formats corses, routes de recherche et lookup, conservation des identites sans coordonnees. Import rejoue sans doublons et recette HTTP reussie. 48 tests passent ; couverture 68,52 % lignes, 80,12 % branches. Les anciennes preuves gardent leur portee historique.

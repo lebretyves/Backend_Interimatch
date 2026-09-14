@@ -9,17 +9,17 @@ Sources figées dans references/, empreintes dans SOURCE_MANIFEST.json. Nouvelle
 ## État réel
 - Projet créé dans E:/Interimatch/InfiMatch. Premier commit : 2b52e4c ; point de réalisation intermédiaire : e0defee. Pour le dernier commit, utiliser git log -1 ; git status doit toujours être relu.
 - Node 24, NestJS 12.0.2, Express, TypeORM sans synchronize, PostgreSQL/PostGIS/btree_gist, MongoDB/Mongoose, n8n 2.38.7. Versions npm verrouillées et images Docker figées par digest.
-- Trois migrations appliquées : InitialSchema1789380000000, Extended1789380100000, Harden1789380200000.
+- Quatre migrations appliquées : InitialSchema1789380000000, Extended1789380100000, Harden1789380200000, Finess1789380300000.
 - Modules : auth, profiles/RPPS, missions/applications/assignments, matching, listings/favorites/dashboards/history, documents/bank, organizations/staffing requests, reference data, public import, automation.
 - API et n8n sont locaux. main écoute 127.0.0.1:3100 ; n8n 127.0.0.1:55678 ; PostgreSQL 55432 ; MongoDB 57017.
 - Seed fictif rejoué : 3 comptes à la première exécution, 0 à la seconde. Mots de passe locaux dans data/, jamais dans Git. RPPS du seed non vérifié.
-- Dernière passe complète : 44 tests réussis, 70,11 % des lignes et 80,91 % des branches du processus instrumenté. Regarder docs/proofs/verification.json et coverage.txt pour les résultats actuels. Les anciennes sorties sont historiques.
+- Dernière passe complète : 48 tests réussis, 68,52 % des lignes et 80,12 % des branches du processus instrumenté. Regarder docs/proofs/verification.json et coverage.txt pour les résultats actuels. Les anciennes sorties sont historiques.
 - Tests réels des trois workflows, reçus SQL, notifications sans doublon, confirmation PDF, accès inter-organisations, annulation, MongoDB et chiffrement.
 - Tests de concurrence : affectation unique, exclusion SQL des chevauchements, retour RPPS tardif ignoré, profil incompatible refusé après affectation.
 - Un résultat d'audit npm à zéro concerne npm uniquement ; il ne vaut pas audit global de sécurité.
 
 ## Écarts restant à traiter — aucune conformité intégrale revendiquée
-1. **Accès fournisseurs bloqués** : aucune clé ANS/France Travail disponible. Adaptateurs et fixtures testés ; aucun import public authentifié réel, aucun RPPS réel vérifié. Confirmer le contrat et les droits de réutilisation sur le compte fournisseur puis conserver un manifeste réel.
+1. **Accès fournisseurs bloqués** : ANS/RPPS non vérifié en réel. France Travail et FINESS sont désormais importés réellement, voir ACQUISITION_REELLE.md. Confirmer le contrat et les droits de réutilisation sur le compte fournisseur puis conserver un manifeste réel.
 2. **Recette V1 complémentaire** : tous les endpoints ne sont pas couverts. Panne MongoDB, expiration/obsolescence des traces, rotation effective des clés et récupération STAGING sont désormais testées. Restent notamment la relance du worker après crash et la génération PDF concurrente expirant sa réservation.
 3. **Écarts d'implémentation à corriger avant recette intégrale** : pagination encore limitée sur certaines listes secondaires ; idempotence des autres commandes sensibles et schémas OpenAPI de sortie à compléter. Recommandations/candidats maintenant classés globalement par lots et paginés ; notifications et relances traitées par lots. Recherche interne/externe commune ajoutée avec exclusion des champs inconnus pour les filtres stricts. Distance PostGIS commune aux décisions ; pondérations configurables et versionnées par empreinte, rétention configurable. Reprises SQL bornées à trois tentatives et testées.
 4. **Déploiement** : HTTPS et TLS interservices, comptes de bases au moindre privilège, analyse des images, conservation/purge globale et restauration complète MongoDB/fichiers/clés/n8n non validés. Ne pas qualifier le Compose local de production.
@@ -41,3 +41,13 @@ Commit 28923fc : 44 tests passent. Bundle restaure dans backups/restore-code-289
 ## Synchronisation documentaire du 14 septembre 2026
 
 README et REQUIREMENTS_V1.md relient les exigences, preuves, architecture et flux. Le plan décrit maintenant les fichiers présents. Les archives sources et le code restent inchangés ; les 44 tests renvoient au commit 28923fc. Les limites de recette, fournisseurs et production sont conservées.
+
+## Actualisation des acces fournisseurs
+
+France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
+
+## Etat confirme le 15 septembre 2026
+
+48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
+
+Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).

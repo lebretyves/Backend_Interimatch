@@ -1,3 +1,4 @@
+import { Finess1789380300000 } from "./finess";
 import { retryTransaction } from "../common/retry";
 import { Global, Injectable, Module, OnModuleDestroy } from "@nestjs/common";
 import { DataSource, EntityManager } from "typeorm";
@@ -15,6 +16,7 @@ export class Database implements OnModuleDestroy {
       InitialSchema1789380000000,
       Extended1789380100000,
       Harden1789380200000,
+      Finess1789380300000,
     ],
     logging: false,
     extra: { max: 12 },

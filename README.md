@@ -13,7 +13,7 @@ Le périmètre cible reste **100 % de la V1 validée**. Ce dépôt contient une 
 
 Les schémas Mermaid sont inclus dans les fichiers Markdown et s'affichent dans un lecteur compatible. La [source architecture-v1.mmd](docs/architecture-v1.mmd) reste modifiable. Les documents distinguent le backend présent, les scénarios testés et les travaux restants.
 
-Dernier code vérifié : `28923fc`, **44 tests réussis**, couverture des lignes **70,11 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. Les accès réels ANS/France Travail, le frontend et le déploiement distant restent à valider.
+Dernier code vérifié : voir docs/proofs/verification.json, **48 tests réussis**, couverture des lignes **68,52 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. L’accès ANS/RPPS, le frontend et le déploiement distant restent à valider. France Travail et FINESS sont importés réellement.
 
 ## Démarrer sous PowerShell
 
@@ -128,3 +128,15 @@ node backend/dist/cli.js reconcile-documents --minimum-age-minutes 5
 ```
 
 La commande ne rend READY qu'un fichier dont le chiffrement et la taille ont été vérifiés. Un fichier absent, une clé manquante ou un tag invalide laisse le document en attente. Le rapport livré est aussi disponible dans [coverage-report.zip](docs/proofs/coverage-report.zip).
+
+## Actualisation des acces fournisseurs
+
+France Travail : authentification et import reels reussis, 50 offres du lot relues en SQL avec provenance et rejeu sans doublons. Le blocage des identifiants France Travail est leve ; ANS reste non verifie en reel. FINESS : controle de l’archive realise, integration geographique en attente du systeme de projection source. Voir le [compte rendu et les preuves](docs/ACQUISITION_REELLE.md). Les mentions precedentes d’absence de cles France Travail decrivent l’etat anterieur.
+
+## Etat confirme le 15 septembre 2026
+
+48 tests passent, typecheck et build reussis. France Travail : authentification et import reels, rejeu sans doublons. FINESS : snapshot officiel importe puis rejoue, 174 621 identifiants uniques, 104 752 actifs, 120 663 avec coordonnees exploitables ; recherche HTTP testee. Les 53 958 autres restent consultables sans coordonnees. La recette HTTP reelle et les imports CLI ne sont pas instrumentes par la couverture.
+
+Routes : GET /api/v1/reference-data/finess et GET /api/v1/reference-data/finess/:finess. Le controle FINESS est une presence dans un snapshot date, sans attribution de droits ni nouveau blocage automatique a l’inscription. Lire docs/ACQUISITION_REELLE.md (ACQUISITION_REELLE.md depuis docs).
+
+Les instructions completes d’import FINESS et les preuves fournisseurs sont dans [ACQUISITION_REELLE.md](docs/ACQUISITION_REELLE.md).

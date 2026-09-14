@@ -1,3 +1,4 @@
+import { FinessModule } from "./reference-data/finess.module";
 import "reflect-metadata";
 import "./config";
 import {
@@ -50,6 +51,7 @@ class HealthController {
     AutomationModule,
     OrganizationsModule,
     ReferenceDataModule,
+    FinessModule,
   ],
   controllers: [HealthController],
 })

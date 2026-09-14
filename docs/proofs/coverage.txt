@@ -10,78 +10,83 @@
 > @infimatch/backend@0.1.0 test:compile
 > tsc --outDir .test-build
 
-✔ full internal journey and concurrency, with isolated fixture RPPS (3109.9353ms)
-✔ CSRF required before registration (16.7787ms)
-✔ a late RPPS answer cannot overwrite a newer number (223.1786ms)
-✔ PostgreSQL exclusion is a backstop against overlapping active assignments (15.2124ms)
-✔ MongoDB failure returns an explicit degraded result and an audit trace (13.2973ms)
-✔ an ended assignment completes atomically and cannot be reopened (50.1106ms)
-✔ document key rotation reads previous versions and writes the active version (28.8237ms)
-✔ authenticated encryption rejects tampering and swapped documents (3.2655ms)
-✔ encryption uses independent nonces (0.3636ms)
-✔ HTML is not accepted as PDF (0.1635ms)
-✔ IDE OR IADE filters stay in their branch and all values are bound (0.6428ms)
-✔ unselected branch filter rejected (0.3484ms)
-✔ incomplete location rejected (0.1544ms)
-✔ night requires full availability including next day (16.3764ms)
-✔ adjacent intervals merge but gaps do not (2.2446ms)
-✔ RPPS NOT_FOUND cannot be offset by score (0.9784ms)
-✔ RPPS PENDING cannot be offset by score (0.2804ms)
-✔ RPPS NOT_CHECKED cannot be offset by score (0.3117ms)
-✔ no IADE to IBODE equivalence (0.2284ms)
-✔ mixed population requires both competencies (0.1806ms)
-✔ unknown location is not zero distance (0.1607ms)
-✔ consecutive assignments do not overlap (0.3167ms)
-✔ overlapping experience counted once (0.9158ms)
-✔ timezone required and interval positive (0.9289ms)
-✔ documented score example is 93.75 and exposes components (0.6584ms)
-✔ public offer cleanup retains provenance and no invented dates (3.1163ms)
-✔ permanent contract rejected from interim import (0.5853ms)
-✔ unknown qualification stays unknown (0.2336ms)
-✔ IBODE does not become IADE (0.1799ms)
-✔ missing provider access cannot report an acquisition (0.5417ms)
-✔ missing credentials is pending (1.6017ms)
-✔ zero exact results is not found (13.2239ms)
-✔ exact RPPS found (0.5044ms)
-✔ HTTP 401 remains pending (0.246ms)
-✔ HTTP 403 remains pending (0.1678ms)
-✔ HTTP 404 remains pending (0.1178ms)
-✔ HTTP 429 remains pending (0.1906ms)
-✔ HTTP 500 remains pending (0.1356ms)
-✔ HTTP 503 remains pending (0.115ms)
-✔ malformed results cannot prove absence (0.2648ms)
-✔ a different practitioner does not count as found (0.1978ms)
-✔ transient serialization failure is retried, then returns committed result (79.7982ms)
-✔ deadlock retries stop after three attempts (99.0298ms)
-✔ uniqueness/business conflicts are not retried (0.673ms)
-ℹ tests 44
+✔ full internal journey and concurrency, with isolated fixture RPPS (2877.6344ms)
+✔ CSRF required before registration (8.5091ms)
+✔ a late RPPS answer cannot overwrite a newer number (182.5017ms)
+✔ PostgreSQL exclusion is a backstop against overlapping active assignments (16.4072ms)
+✔ MongoDB failure returns an explicit degraded result and an audit trace (17.8133ms)
+✔ an ended assignment completes atomically and cannot be reopened (63.8229ms)
+✔ document key rotation reads previous versions and writes the active version (35.7838ms)
+✔ authenticated encryption rejects tampering and swapped documents (4.3247ms)
+✔ encryption uses independent nonces (0.473ms)
+✔ HTML is not accepted as PDF (0.2239ms)
+✔ IDE OR IADE filters stay in their branch and all values are bound (0.986ms)
+✔ unselected branch filter rejected (0.5633ms)
+✔ incomplete location rejected (0.2781ms)
+✔ FINESS retains leading zero and Corsican identifiers (1.8628ms)
+✔ FINESS selects degree coordinates instead of projected XY (0.9438ms)
+✔ FINESS refuses ambiguous pairs and retains unknown coordinates (0.3403ms)
+✔ FINESS identity lookup includes entries without address and inactive entries (2.4193ms)
+✔ night requires full availability including next day (21.8124ms)
+✔ adjacent intervals merge but gaps do not (2.1941ms)
+✔ RPPS NOT_FOUND cannot be offset by score (1.247ms)
+✔ RPPS PENDING cannot be offset by score (0.3547ms)
+✔ RPPS NOT_CHECKED cannot be offset by score (0.3281ms)
+✔ no IADE to IBODE equivalence (0.2757ms)
+✔ mixed population requires both competencies (0.2417ms)
+✔ unknown location is not zero distance (0.2036ms)
+✔ consecutive assignments do not overlap (0.3224ms)
+✔ overlapping experience counted once (1.0341ms)
+✔ timezone required and interval positive (0.8214ms)
+✔ documented score example is 93.75 and exposes components (0.5491ms)
+✔ public offer cleanup retains provenance and no invented dates (4.0507ms)
+✔ permanent contract rejected from interim import (0.8812ms)
+✔ unknown qualification stays unknown (0.4291ms)
+✔ IBODE does not become IADE (0.3953ms)
+✔ missing provider access cannot report an acquisition (1.5283ms)
+✔ missing credentials is pending (2.0407ms)
+✔ zero exact results is not found (14.6291ms)
+✔ exact RPPS found (0.4774ms)
+✔ HTTP 401 remains pending (0.2457ms)
+✔ HTTP 403 remains pending (0.1585ms)
+✔ HTTP 404 remains pending (0.1523ms)
+✔ HTTP 429 remains pending (0.1948ms)
+✔ HTTP 500 remains pending (0.179ms)
+✔ HTTP 503 remains pending (0.159ms)
+✔ malformed results cannot prove absence (0.3317ms)
+✔ a different practitioner does not count as found (0.2677ms)
+✔ transient serialization failure is retried, then returns committed result (93.9194ms)
+✔ deadlock retries stop after three attempts (89.4162ms)
+✔ uniqueness/business conflicts are not retried (1.0748ms)
+ℹ tests 48
 ℹ suites 0
-ℹ pass 44
+ℹ pass 48
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 15940.9728
+ℹ duration_ms 14891.4149
 ---------------------------|---------|----------|---------|---------|-------------------------------
 File                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
 ---------------------------|---------|----------|---------|---------|-------------------------------
-All files                  |   70.11 |    80.91 |   77.81 |   70.11 |
- src                       |   66.19 |    61.76 |   66.66 |   66.19 |
-  app.ts                   |   95.69 |       75 |   66.66 |   95.69 | 37-39,71-73,203-205
-  cli.ts                   |       0 |        0 |       0 |       0 | 1-110
+All files                  |   68.52 |    80.12 |   76.61 |   68.52 |
+ src                       |   62.86 |    61.76 |   66.66 |   62.86 |
+  app.ts                   |   95.73 |       75 |   66.66 |   95.73 | 38-40,73-75,205-207
+  cli.ts                   |       0 |        0 |       0 |       0 | 1-130
   config.ts                |   97.22 |    33.33 |     100 |   97.22 | 33
- src/auth                  |   93.63 |    86.66 |     100 |   93.63 |
-  auth.module.ts           |   93.63 |    86.66 |     100 |   93.63 | 135-140,149-156
+ src/auth                  |   93.66 |    86.66 |     100 |   93.66 |
+  auth.module.ts           |   93.66 |    86.66 |     100 |   93.66 | 136-141,150-157
  src/automation            |   18.25 |       75 |      50 |   18.25 |
   automation.module.ts     |   18.25 |       75 |      50 |   18.25 | ...67-317,327,332-337,343-348
  src/common                |     100 |    94.73 |     100 |     100 |
   access.ts                |     100 |    88.88 |     100 |     100 | 46
   page.dto.ts              |     100 |      100 |     100 |     100 |
   retry.ts                 |     100 |      100 |     100 |     100 |
- src/database              |   64.89 |       90 |   66.66 |   64.89 |
+ src/database              |   63.54 |       90 |      60 |   63.54 |
   database.ts              |     100 |      100 |     100 |     100 |
   distance.ts              |     100 |    33.33 |     100 |     100 | 14-19
   extended.ts              |   27.77 |      100 |       0 |   27.77 | 4-12,14-17
+  finess.ts                |   38.46 |      100 |       0 |   38.46 | 4-9,11-12
   harden.ts                |   29.41 |      100 |       0 |   29.41 | 4-13,15-16
   schema.ts                |   10.86 |      100 |       0 |   10.86 | 4-40,42-45
  src/demo                  |       0 |        0 |       0 |       0 |
@@ -97,17 +102,19 @@ All files                  |   70.11 |    80.91 |   77.81 |   70.11 |
   search.ts                |   93.64 |    82.35 |      70 |   93.64 | 177-180,191-201
  src/matching              |   78.98 |    89.47 |   84.61 |   78.98 |
   matching.module.ts       |   78.98 |    89.47 |   84.61 |   78.98 | 154-201,239-244
- src/missions              |   78.43 |    82.07 |   86.79 |   78.43 |
+ src/missions              |   78.43 |    81.13 |   86.79 |   78.43 |
   mission.dto.ts           |     100 |      100 |     100 |     100 |
   missions.module.ts       |   71.73 |      100 |      70 |   71.73 | ...97,107-111,113-118,120-131
-  missions.service.ts      |   74.87 |    73.61 |    92.3 |   74.87 | ...03,309-311,314-319,325-326
- src/organizations         |   51.06 |    72.22 |   63.15 |   51.06 |
-  organizations.module.ts  |   51.06 |    72.22 |   63.15 |   51.06 | ...-91,93-102,104-108,110-121
+  missions.service.ts      |   74.87 |    72.22 |    92.3 |   74.87 | ...03,309-311,314-319,325-326
+ src/organizations         |    51.4 |    72.22 |   63.15 |    51.4 |
+  organizations.module.ts  |    51.4 |    72.22 |   63.15 |    51.4 | ...-92,94-103,105-109,111-122
  src/profiles              |   93.33 |    85.71 |   74.28 |   93.33 |
   profiles.module.ts       |   92.61 |    81.57 |   73.33 |   92.61 | ...77,249-250,255-256,258-264
   rpps.ts                  |    95.5 |       92 |      80 |    95.5 | 55-56,62-63
  src/public-data           |   46.83 |    57.69 |      75 |   46.83 |
   offers.ts                |   46.83 |    57.69 |      75 |   46.83 | 72-108,111-112,114-158
- src/reference-data        |   72.63 |      100 |       0 |   72.63 |
+ src/reference-data        |   55.62 |    73.58 |   54.54 |   55.62 |
+  finess.module.ts         |   50.79 |    66.66 |      40 |   50.79 | 28-43,46-60
+  finess.ts                |   48.33 |       74 |      80 |   48.33 | 88-180
   reference-data.module.ts |   72.63 |      100 |       0 |   72.63 | 67-92
 ---------------------------|---------|----------|---------|---------|-------------------------------

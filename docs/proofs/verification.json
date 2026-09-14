@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-14T21:25:37.035Z",
+  "date": "2026-09-14T22:01:35.560Z",
   "results": [
     {
       "command": "npm run typecheck",
@@ -14,6 +14,9 @@
       "exitCode": 0
     }
   ],
-  "codeCommit": "28923fcfd80a9c1c317e42f226ddb887162f4020",
-  "testsPassed": 44
+  "testsPassed": 48,
+  "additionalLiveChecks": [
+    "france-travail-live.json",
+    "finess-live.json"
+  ]
 }

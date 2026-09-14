@@ -1,34 +1,36 @@
 flowchart LR
-    subgraph client["Accès"]
+    subgraph client["AccÃ¨s"]
         caller["Client HTTP local"]
-        front["Frontend Next.js prévu"]
+        front["Frontend Next.js prÃ©vu"]
     end
-    subgraph service["Backend : même code NestJS"]
+    subgraph service["Backend : mÃªme code NestJS"]
         api["API HTTP : main.ts"]
         worker["Worker outbox : worker.ts"]
         cli["CLI : cli.ts"]
     end
-    subgraph datastore["Stockages locaux privés"]
-        sql["PostgreSQL / PostGIS : vérité métier"]
+    subgraph datastore["Stockages locaux privÃ©s"]
+        sql["PostgreSQL / PostGIS : vÃ©ritÃ© mÃ©tier"]
         mongo["MongoDB : explications de matching"]
-        files["Fichiers privés AES-256-GCM"]
+        files["Fichiers privÃ©s AES-256-GCM"]
     end
     subgraph async["Automatisation"]
         n8n["n8n : 3 workflows et volume technique"]
     end
-    subgraph external["Accès réels restant à valider"]
+    subgraph external["AccÃ¨s rÃ©els restant Ã  valider"]
         ans["ANS : RPPS"]
-        ft["France Travail : offres"]
+        ft["France Travail : offres, accès vérifié"]
+        finess["ANS / data.gouv.fr : snapshot FINESS"]
     end
     caller -->|"Cookie, Origin, CSRF"| api
-    front -.->|"Intégration à réaliser"| api
+    front -.->|"IntÃ©gration Ã  rÃ©aliser"| api
     api -->|"Transactions, sessions, audit, outbox"| sql
-    api -->|"Historique minimisé et expiration"| mongo
-    api -->|"Chiffrement et téléchargement autorisé"| files
-    worker -->|"Réservation et reçu final"| sql
-    cli -->|"Migrations, import, réparation documentaire"| sql
-    cli -->|"Réconciliation des fichiers"| files
-    worker -.->|"Événements après commit"| n8n
-    n8n -.->|"Routes internes authentifiées"| api
+    api -->|"Historique minimisÃ© et expiration"| mongo
+    api -->|"Chiffrement et tÃ©lÃ©chargement autorisÃ©"| files
+    worker -->|"RÃ©servation et reÃ§u final"| sql
+    cli -->|"Migrations, import, rÃ©paration documentaire"| sql
+    cli -->|"RÃ©conciliation des fichiers"| files
+    worker -.->|"Ã‰vÃ©nements aprÃ¨s commit"| n8n
+    n8n -.->|"Routes internes authentifiÃ©es"| api
     api -.->|"Recherche exacte RPPS"| ans
     cli -.->|"Acquisition des offres"| ft
+    cli -.->|"Import du fichier officiel téléchargé"| finess

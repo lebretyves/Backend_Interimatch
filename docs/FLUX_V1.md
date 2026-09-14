@@ -1,8 +1,8 @@
-# Flux métier et techniques V1
+# Flux mÃ©tier et techniques V1
 
-Ces schémas décrivent le backend présent. Les scénarios testés et les limites sont dans les [exigences](REQUIREMENTS_V1.md) et la [reprise](REPRISE_BACKEND_V1.md). Les appels utilisateurs portent le préfixe `/api/v1`.
+Ces schÃ©mas dÃ©crivent le backend prÃ©sent. Les scÃ©narios testÃ©s et les limites sont dans les [exigences](REQUIREMENTS_V1.md) et la [reprise](REPRISE_BACKEND_V1.md). Les appels utilisateurs portent le prÃ©fixe `/api/v1`.
 
-## Authentification et écritures
+## Authentification et Ã©critures
 
 ```mermaid
 sequenceDiagram
@@ -13,36 +13,36 @@ sequenceDiagram
     API->>PostgreSQL: Session anonyme
     API-->>Client: Cookie et csrfToken
     Client->>API: POST auth/login avec cookie, Origin, X-CSRF-Token
-    API->>PostgreSQL: Lire compte et vérifier session
-    API->>API: Vérifier Argon2id et renouveler session
+    API->>PostgreSQL: Lire compte et vÃ©rifier session
+    API->>API: VÃ©rifier Argon2id et renouveler session
     API->>PostgreSQL: Persister nouvelle session
     API-->>Client: Nouveau cookie et nouveau csrfToken
-    Client->>API: Écriture avec les nouveaux éléments
+    Client->>API: Ã‰criture avec les nouveaux Ã©lÃ©ments
     API->>API: Valider DTO et droits
-    API->>PostgreSQL: Mutation autorisée
-    API-->>Client: Résultat
+    API->>PostgreSQL: Mutation autorisÃ©e
+    API-->>Client: RÃ©sultat
 ```
 
-Un échec d'authentification ou de protection d'écriture interrompt ce parcours. La déconnexion détruit la session serveur. Les routes d'automatisation emploient une authentification de service distincte.
+Un Ã©chec d'authentification ou de protection d'Ã©criture interrompt ce parcours. La dÃ©connexion dÃ©truit la session serveur. Les routes d'automatisation emploient une authentification de service distincte.
 
-## RPPS : aucun contrôle manuel par l'agence
+## RPPS : aucun contrÃ´le manuel par l'agence
 
 ```mermaid
 flowchart TD
-    input["Saisie ou modification du RPPS"] --> pending["PENDING et incrément de version"]
+    input["Saisie ou modification du RPPS"] --> pending["PENDING et incrÃ©ment de version"]
     pending --> request["Recherche exacte ANS"]
-    request --> current{"Numéro et version encore courants ?"}
+    request --> current{"NumÃ©ro et version encore courants ?"}
     current -->|"Non"| ignored["Ignorer le retour tardif"]
-    current -->|"Oui"| result{"Réponse exploitable ?"}
-    result -->|"Identifiant exact retrouvé"| found["FOUND"]
+    current -->|"Oui"| result{"RÃ©ponse exploitable ?"}
+    result -->|"Identifiant exact retrouvÃ©"| found["FOUND"]
     result -->|"Recherche exacte vide"| missing["NOT_FOUND"]
-    result -->|"Panne, clé absente ou réponse incohérente"| waiting["PENDING"]
-    found --> rules["Vérifier aussi les autres critères métier"]
-    missing --> blocked["Candidature interne et nouvelle affectation bloquées"]
-    waiting --> hold["Actions en attente jusqu'à vérification réussie"]
+    result -->|"Panne, clÃ© absente ou rÃ©ponse incohÃ©rente"| waiting["PENDING"]
+    found --> rules["VÃ©rifier aussi les autres critÃ¨res mÃ©tier"]
+    missing --> blocked["Candidature interne et nouvelle affectation bloquÃ©es"]
+    waiting --> hold["Actions en attente jusqu'Ã  vÃ©rification rÃ©ussie"]
 ```
 
-`NOT_CHECKED` ne satisfait pas non plus le contrôle. Le profil et la recherche restent accessibles. Un changement RPPS ne rétro-annule pas une affectation. Les réponses fournisseurs des tests sont simulées ; l'accès ANS réel reste à valider.
+`NOT_CHECKED` ne satisfait pas non plus le contrÃ´le. Le profil et la recherche restent accessibles. Un changement RPPS ne rÃ©tro-annule pas une affectation. Les rÃ©ponses fournisseurs des tests sont simulÃ©es ; l'accÃ¨s ANS rÃ©el reste Ã  valider.
 
 ## Recherche et matching
 
@@ -50,19 +50,19 @@ flowchart TD
 flowchart TD
     search["Recherche manuelle"] --> branches["OU entre branches IDE, IADE, IBODE"]
     branches --> filters["ET entre filtres de la branche"]
-    filters --> listings["Résultats internes et externes distingués"]
+    filters --> listings["RÃ©sultats internes et externes distinguÃ©s"]
     listings --> external["Offre externe : candidature par redirection"]
-    profile["Profil et missions ouvertes"] --> gate["Qualifications, prérequis, RPPS, dates, mobilité, conflits"]
-    gate -->|"Non éligible"| excluded["Exclusion du classement"]
-    gate -->|"Éligible"| score["Score déterministe C, Z, D, E"]
+    profile["Profil et missions ouvertes"] --> gate["Qualifications, prÃ©requis, RPPS, dates, mobilitÃ©, conflits"]
+    gate -->|"Non Ã©ligible"| excluded["Exclusion du classement"]
+    gate -->|"Ã‰ligible"| score["Score dÃ©terministe C, Z, D, E"]
     score --> rank["Classement global puis pagination"]
-    rank --> trace["Explication MongoDB minimisée et versionnée"]
-    trace --> output["Résultat et statut de disponibilité de l'historique"]
+    rank --> trace["Explication MongoDB minimisÃ©e et versionnÃ©e"]
+    trace --> output["RÃ©sultat et statut de disponibilitÃ© de l'historique"]
 ```
 
-Le score par défaut est `100 × (0,45 C + 0,25 Z + 0,20 D + 0,10 E)`. Les pondérations configurées changent la version des règles. La distance est calculée avec PostGIS. Les disponibilités doivent couvrir tout l'intervalle, après retrait des indisponibilités, avec des bornes semi-ouvertes.
+Le score par dÃ©faut est `100 Ã— (0,45 C + 0,25 Z + 0,20 D + 0,10 E)`. Les pondÃ©rations configurÃ©es changent la version des rÃ¨gles. La distance est calculÃ©e avec PostGIS. Les disponibilitÃ©s doivent couvrir tout l'intervalle, aprÃ¨s retrait des indisponibilitÃ©s, avec des bornes semi-ouvertes.
 
-Les champs externes inconnus excluent une offre des filtres stricts correspondants. Une offre externe ne devient pas une mission interne et ne reçoit pas le score complet interne. Les explications expirées, liées à un profil ou à une mission modifiés sont signalées comme périmées.
+Les champs externes inconnus excluent une offre des filtres stricts correspondants. Une offre externe ne devient pas une mission interne et ne reÃ§oit pas le score complet interne. Les explications expirÃ©es, liÃ©es Ã  un profil ou Ã  une mission modifiÃ©s sont signalÃ©es comme pÃ©rimÃ©es.
 
 ## Candidature et affectation humaine
 
@@ -72,35 +72,35 @@ sequenceDiagram
     participant Agence
     participant API
     participant PostgreSQL
-    Infirmier->>API: Candidature avec consentement à la version
-    API->>PostgreSQL: Contrôles et candidature SUBMITTED
-    Agence->>API: Sélection ou refus selon ses droits
+    Infirmier->>API: Candidature avec consentement Ã  la version
+    API->>PostgreSQL: ContrÃ´les et candidature SUBMITTED
+    Agence->>API: SÃ©lection ou refus selon ses droits
     Agence->>API: Affectation avec applicationId et Idempotency-Key
     API->>PostgreSQL: Transaction et verrous mission, profil, candidature
-    API->>API: Recontrôler droits, consentement et éligibilité
+    API->>API: RecontrÃ´ler droits, consentement et Ã©ligibilitÃ©
     API->>PostgreSQL: Assignment ACTIVE, application ACCEPTED, mission FILLED
     API->>PostgreSQL: Audit et outbox AssignmentCreated
     PostgreSQL-->>API: Commit
-    API-->>Agence: Affectation validée
+    API-->>Agence: Affectation validÃ©e
 ```
 
-Le même identifiant d'idempotence avec le même contenu renvoie le résultat initial ; un contenu différent produit un conflit. Un conflit de disponibilité empêche le commit. Une modification substantielle ou une réouverture exige un consentement à jour. La sélection seule ne constitue pas une affectation.
+Le mÃªme identifiant d'idempotence avec le mÃªme contenu renvoie le rÃ©sultat initial ; un contenu diffÃ©rent produit un conflit. Un conflit de disponibilitÃ© empÃªche le commit. Une modification substantielle ou une rÃ©ouverture exige un consentement Ã  jour. La sÃ©lection seule ne constitue pas une affectation.
 
-## États des missions
+## Ã‰tats des missions
 
 ```mermaid
 stateDiagram-v2
     [*] --> DRAFT
     DRAFT --> OPEN: publication
-    OPEN --> FILLED: affectation validée
-    FILLED --> COMPLETED: clôture autorisée
+    OPEN --> FILLED: affectation validÃ©e
+    FILLED --> COMPLETED: clÃ´ture autorisÃ©e
     DRAFT --> CANCELLED: annulation
     OPEN --> CANCELLED: annulation
     FILLED --> CANCELLED: annulation
-    CANCELLED --> DRAFT: réouverture avec nouvelle version
+    CANCELLED --> DRAFT: rÃ©ouverture avec nouvelle version
 ```
 
-Une mission terminée ne peut pas être rouverte. L'annulation met à jour mission, affectation et statut de confirmation dans une transaction ; le document historique reste identifiable comme annulé.
+Une mission terminÃ©e ne peut pas Ãªtre rouverte. L'annulation met Ã  jour mission, affectation et statut de confirmation dans une transaction ; le document historique reste identifiable comme annulÃ©.
 
 ## Trois workflows n8n
 
@@ -110,40 +110,54 @@ sequenceDiagram
     participant PostgreSQL
     participant n8n
     participant API
-    Worker->>PostgreSQL: Réserver un événement après commit
-    PostgreSQL-->>Worker: Événement et réservation temporaire
-    Worker->>n8n: Webhook authentifié de matching ou confirmation
-    n8n->>API: Route interne authentifiée
-    API->>PostgreSQL: Recontrôles, résultat métier et reçu final
+    Worker->>PostgreSQL: RÃ©server un Ã©vÃ©nement aprÃ¨s commit
+    PostgreSQL-->>Worker: Ã‰vÃ©nement et rÃ©servation temporaire
+    Worker->>n8n: Webhook authentifiÃ© de matching ou confirmation
+    n8n->>API: Route interne authentifiÃ©e
+    API->>PostgreSQL: RecontrÃ´les, rÃ©sultat mÃ©tier et reÃ§u final
     n8n-->>Worker: Retour HTTP
-    Worker->>PostgreSQL: Vérifier le reçu métier final
+    Worker->>PostgreSQL: VÃ©rifier le reÃ§u mÃ©tier final
     Worker->>PostgreSQL: Marquer le traitement ou programmer une reprise
 ```
 
-- A — `matches.json` : mission publiée ou demande de recalcul → éligibilité et préférences actuelles → notification interne sans doublon.
-- B — `reminders.json` : déclenchement horaire n8n → contrôle d'une mission ouverte, à venir et suffisamment ancienne → relance unique par fenêtre. Un webhook authentifié permet aussi la recette.
-- C — `confirmation.json` : événement `AssignmentCreated` → génération backend du PDF fictif non signé → accès privé et notifications.
+- A â€” `matches.json` : mission publiÃ©e ou demande de recalcul â†’ Ã©ligibilitÃ© et prÃ©fÃ©rences actuelles â†’ notification interne sans doublon.
+- B â€” `reminders.json` : dÃ©clenchement horaire n8n â†’ contrÃ´le d'une mission ouverte, Ã  venir et suffisamment ancienne â†’ relance unique par fenÃªtre. Un webhook authentifiÃ© permet aussi la recette.
+- C â€” `confirmation.json` : Ã©vÃ©nement `AssignmentCreated` â†’ gÃ©nÃ©ration backend du PDF fictif non signÃ© â†’ accÃ¨s privÃ© et notifications.
 
-Le worker réserve pendant 90 secondes et reprend avec temporisation exponentielle, au maximum cinq tentatives. Un HTTP 200 sans reçu final ne suffit pas. Une panne d'automatisation n'annule pas l'affectation déjà validée.
+Le worker rÃ©serve pendant 90 secondes et reprend avec temporisation exponentielle, au maximum cinq tentatives. Un HTTP 200 sans reÃ§u final ne suffit pas. Une panne d'automatisation n'annule pas l'affectation dÃ©jÃ  validÃ©e.
 
-## Confirmation et documents privés
+## Confirmation et documents privÃ©s
 
 ```mermaid
 flowchart TD
-    event["AssignmentCreated après commit"] --> lease["Réserver la génération avec jeton et expiration"]
-    lease --> pdf["Créer un PDF fictif non signé"]
-    pdf --> stage["Métadonnées STAGING et chiffrement AES-256-GCM"]
-    stage --> privateFile["Écrire le fichier privé"]
-    privateFile --> check["Revérifier affectation et version"]
-    check -->|"Toujours valable"| ready["Confirmation READY et reçu final"]
-    check -->|"Annulée"| cancelled["Confirmation CANCELLED"]
-    ready --> auth["Téléchargement : droits actuels du participant"]
-    auth --> decrypt["Vérifier le tag et déchiffrer"]
-    decrypt --> download["Réponse privée en pièce jointe"]
+    event["AssignmentCreated aprÃ¨s commit"] --> lease["RÃ©server la gÃ©nÃ©ration avec jeton et expiration"]
+    lease --> pdf["CrÃ©er un PDF fictif non signÃ©"]
+    pdf --> stage["MÃ©tadonnÃ©es STAGING et chiffrement AES-256-GCM"]
+    stage --> privateFile["Ã‰crire le fichier privÃ©"]
+    privateFile --> check["RevÃ©rifier affectation et version"]
+    check -->|"Toujours valable"| ready["Confirmation READY et reÃ§u final"]
+    check -->|"AnnulÃ©e"| cancelled["Confirmation CANCELLED"]
+    ready --> auth["TÃ©lÃ©chargement : droits actuels du participant"]
+    auth --> decrypt["VÃ©rifier le tag et dÃ©chiffrer"]
+    decrypt --> download["RÃ©ponse privÃ©e en piÃ¨ce jointe"]
     stage -.->|"Interruption"| recover["CLI reconcile-documents"]
-    recover --> valid{"Fichier, clé, tag et taille valides ?"}
+    recover --> valid{"Fichier, clÃ©, tag et taille valides ?"}
     valid -->|"Oui"| docReady["Document READY"]
     valid -->|"Non"| keep["Document maintenu en attente"]
 ```
 
-La réconciliation documentaire ne remplace pas la reprise métier de la confirmation. Les anciennes clés restent nécessaires aux anciens documents. Aucun document, clé ou fichier `.env` n'entre dans le bundle Git. Ce PDF n'est pas un contrat signé ; contrats F24 en V3, attestation en V2 et références hors V1.
+La rÃ©conciliation documentaire ne remplace pas la reprise mÃ©tier de la confirmation. Les anciennes clÃ©s restent nÃ©cessaires aux anciens documents. Aucun document, clÃ© ou fichier `.env` n'entre dans le bundle Git. Ce PDF n'est pas un contrat signÃ© ; contrats F24 en V3, attestation en V2 et rÃ©fÃ©rences hors V1.
+
+## Referentiel FINESS
+
+```mermaid
+flowchart LR
+    source["Snapshot officiel ANS gzip"] --> streaming["Lecture JSON en flux et empreinte"]
+    streaming --> validation["Identifiants, etats et coordonnees source"]
+    validation --> transaction["Remplacement atomique du referentiel SQL"]
+    transaction --> api["Recherche paginee ou numero exact"]
+    api --> found["Presence dans le snapshot et provenance datee"]
+    api --> missing["Absence dans le snapshot, aucune preuve nationale actuelle"]
+```
+
+Les donnees d'identite sans coordonnees restent consultables. Ce flux ne modifie ni les droits des organisations ni les lieux des missions. Voir [l'acquisition reelle](ACQUISITION_REELLE.md).

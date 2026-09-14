@@ -1,3 +1,4 @@
+import { importFiness } from "./reference-data/finess";
 import { DocumentsService } from "./documents/documents.module";
 import { seedDemo } from "./demo/seed";
 import "reflect-metadata";
@@ -95,6 +96,25 @@ cli
           await new DocumentsService(db).reconcile(
             Number(opts.minimumAgeMinutes),
           ),
+        ),
+      );
+    } finally {
+      await db.onModuleDestroy();
+    }
+  });
+cli
+  .command("import-finess")
+  .requiredOption("--file <path>")
+  .requiredOption("--source-url <url>")
+  .description("Import a complete official FINESS gzip snapshot atomically")
+  .action(async (opts) => {
+    const db = await new Database().connect();
+    try {
+      console.log(
+        JSON.stringify(
+          await importFiness(db, opts.file, opts.sourceUrl),
+          null,
+          2,
         ),
       );
     } finally {
