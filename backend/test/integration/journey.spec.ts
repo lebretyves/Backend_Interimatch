@@ -1,3 +1,4 @@
+import { normalizeOffer } from "../../src/public-data/offers";
 import {
   AutomationService,
   retryOutbox,
@@ -181,6 +182,17 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     "INSERT INTO external_offer(source,source_id,title,description,url,location_label,qualification,raw_hash,provenance) VALUES('TEST_FIXTURE',$1,'Offre IDE FICTIVE','Donnees synthetiques de test','https://example.invalid/fictif','Paris','IDE','fixture','{\"fictional\":true}') RETURNING id",
     [randomUUID()],
   );
+  const normalized = normalizeOffer({
+    id: "HTTP_FIXTURE",
+    intitule: "IDE H/F",
+    description: "Mission fictive",
+    typeContrat: "MIS",
+    lieuTravail: { libelle: "Paris", commune: "75115" },
+  });
+  await db.query("UPDATE external_offer SET provenance=$1 WHERE id=$2", [
+    JSON.stringify(normalized.provenance),
+    external.id,
+  ]);
   const common = await post(n, "listings/search", {
     qualifications: ["IDE"],
     limit: 50,
@@ -189,6 +201,28 @@ test("full internal journey and concurrency, with isolated fixture RPPS", async 
     common.body.items.find((x: any) => x.id === "e_" + external.id)
       .applicationMode,
   ).toBe("REDIRECT");
+  const externalDetail = await request(app.getHttpServer())
+    .get("/api/v1/listings/e_" + external.id)
+    .expect(200);
+  const externalPage = await request(app.getHttpServer())
+    .get("/api/v1/listings/external?limit=50")
+    .expect(200);
+  for (const item of [
+    common.body.items.find((x: any) => x.id === "e_" + external.id),
+    externalDetail.body,
+    externalPage.body.items.find((x: any) => x.id === "e_" + external.id),
+  ]) {
+    expect(item.correspondence).toMatchObject({
+      mode: "EXTERNAL_CRITERIA",
+      score: null,
+      eligibilityVerified: false,
+    });
+    expect(item.correspondence.criteria.qualification).toEqual({
+      value: "IDE",
+      status: "PROVIDER_REPORTED",
+    });
+    expect(item.raw_hash).toBeUndefined();
+  }
   await post(n, "me/favorites", {
     kind: "EXTERNAL",
     targetId: external.id,

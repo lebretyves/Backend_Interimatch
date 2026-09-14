@@ -15,7 +15,7 @@ Le périmètre cible reste **100 % de la V1 validée**. Ce dépôt contient une 
 
 Les schémas Mermaid sont inclus dans les fichiers Markdown et s'affichent dans un lecteur compatible. La [source architecture-v1.mmd](docs/architecture-v1.mmd) reste modifiable. Les documents distinguent le backend présent, les scénarios testés et les travaux restants.
 
-Dernier code vérifié : voir docs/proofs/verification.json, **56 tests réussis**, couverture des lignes **75,99 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. Les accès ANS/RPPS (FOUND et NOT_FOUND), France Travail et FINESS sont vérifiés. Frontend et déploiement distant restent à valider.
+Dernier code vérifié : voir docs/proofs/verification.json, **62 tests réussis**, couverture des lignes **77,94 %**. Les [preuves](docs/proofs/verification.json) conservent leur date ; une mise à jour documentaire ne constitue pas une nouvelle exécution des tests. Les accès ANS/RPPS (FOUND et NOT_FOUND), France Travail et FINESS sont vérifiés. Frontend et déploiement distant restent à valider.
 
 ## Démarrer sous PowerShell
 
@@ -150,3 +150,8 @@ Le depot et le remplacement documentaire ne disposent pas encore du meme protoco
 [Acquisition reelle et FINESS](docs/ACQUISITION_REELLE.md). Le RPPS positif est demontre dans [la preuve ANS](docs/proofs/ans-fhir-positive.json), sans modification de profil reel.
 
 Depot : https://github.com/lebretyves/Backend_Interimatch ; branche master. Apres verification et commit : `git push origin master`, puis `npm run snapshot`. Les cles, bases et fichiers locaux ignores ne sont pas sauvegardes par Git.
+
+
+## Rectification France Travail du 15 septembre 2026
+
+[Rectificatif du catalogue V1](docs/RECTIFICATIF_CATALOGUE_V1.md) et [contrat des offres externes](docs/OFFRES_EXTERNES_V1.md). Collecte multi-recherches, classement prudent, conservation des informations fournisseur et correspondance sans score complet. Lot Paris : 134 offres importees et rejeu sans doublon ; 120 IDE, 7 IADE, 1 IBODE, 6 non confirmees. Frontend et synchronisation exhaustive restent a completer.

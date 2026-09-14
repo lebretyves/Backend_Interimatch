@@ -1,6 +1,6 @@
 # Recette et revue du backend V1 — 15 septembre 2026
 
-**Verdict : backend local fonctionnel sur les parcours testés, validation intégrale V1 encore incomplète.** La recette initiale passait 48 tests. Après corrections, 56 tests passent ; typecheck et compilation réussissent. Couverture : 75,99 % des lignes, 81,08 % des branches. Les tests ne prouvent pas à eux seuls la conformité de tous les endpoints.
+**Verdict : backend local fonctionnel sur les parcours testés, validation intégrale V1 encore incomplète.** La recette initiale passait 48 tests. Après corrections, 62 tests passent ; typecheck et compilation réussissent. Couverture : 77,94 % des lignes, 82,62 % des branches. Les tests ne prouvent pas à eux seuls la conformité de tous les endpoints.
 
 ## Ce qui fonctionne avec preuve
 
@@ -44,7 +44,7 @@ Le test d'expiration PDF vérifie que le traitement perdant ne remplace pas le d
 | Idempotence documentaire | Upload de justificatif et remplacement bancaire ne disposent pas encore du protocole complet de reçu/reprise avec fichiers. Un rejeu peut ajouter un document ; à traiter avant validation intégrale des commandes sensibles |
 | Conservation des documents | Un traitement PDF perdant peut laisser un fichier chiffré orphelin, inaccessible via l'API. Purge contrôlée et politique de conservation à compléter |
 | OpenAPI | Schémas ajoutés aux commandes et listes principales ; réponses complexes matching, tableaux de bord, données publiques et documents à compléter entièrement |
-| Recette complète des endpoints | 56 tests couvrent les scénarios listés ; aucune couverture exhaustive de toutes les combinaisons de champs et permissions n'est revendiquée |
+| Recette complète des endpoints | 62 tests couvrent les scénarios listés ; aucune couverture exhaustive de toutes les combinaisons de champs et permissions n'est revendiquée |
 | Import des offres | Import réel et normalisation testés, mais rafraîchissement complet et traitement systématique des offres retirées chez le fournisseur à compléter |
 | FINESS | Recherche du référentiel disponible ; intégration au formulaire et choix produit du blocage éventuel non réalisés. Les coordonnées absentes/ambiguës restent inconnues |
 | Déploiement | HTTPS, TLS entre services, rôles de bases au moindre privilège et analyse des images non validés |
@@ -74,3 +74,8 @@ node backend/dist/cli.js retry-outbox --event UUID_EVENEMENT
 Les tests utilisent des données fictives dans les bases locales et l'instance n8n locale. Le processus API appelé par n8n et les scripts de recette fournisseur ne sont pas instrumentés par la couverture. Un audit npm à zéro concerne uniquement les dépendances npm.
 
 Code teste : `e5a2d72db53559d7ee787e95e9d07ecb6d6ea574`. Les modifications suivantes de preuves/documentation ne remplacent pas cette reference de code.
+
+
+## Rectification France Travail du 15 septembre 2026
+
+[Rectificatif du catalogue V1](RECTIFICATIF_CATALOGUE_V1.md) et [contrat des offres externes](OFFRES_EXTERNES_V1.md). Collecte multi-recherches, classement prudent, conservation des informations fournisseur et correspondance sans score complet. Lot Paris : 134 offres importees et rejeu sans doublon ; 120 IDE, 7 IADE, 1 IBODE, 6 non confirmees. Frontend et synchronisation exhaustive restent a completer.

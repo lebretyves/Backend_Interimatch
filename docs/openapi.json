@@ -3162,6 +3162,7 @@
     },
     "/api/v1/listings/search": {
       "post": {
+        "description": "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
         "operationId": "ListingsController_search",
         "parameters": [],
         "requestBody": {
@@ -3259,6 +3260,7 @@
             }
           }
         },
+        "summary": "",
         "tags": [
           "Listings"
         ]
@@ -3266,6 +3268,7 @@
     },
     "/api/v1/listings/external": {
       "get": {
+        "description": "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
         "operationId": "ListingsController_external",
         "parameters": [
           {
@@ -3376,6 +3379,7 @@
             }
           }
         },
+        "summary": "",
         "tags": [
           "Listings"
         ]
@@ -3383,6 +3387,7 @@
     },
     "/api/v1/listings/{id}": {
       "get": {
+        "description": "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
         "operationId": "ListingsController_detail",
         "parameters": [
           {
@@ -3479,6 +3484,7 @@
             }
           }
         },
+        "summary": "",
         "tags": [
           "Listings"
         ]

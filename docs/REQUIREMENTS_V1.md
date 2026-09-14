@@ -37,7 +37,7 @@ Les chemins du tableau sont relatifs à [backend/src](../backend/src), sauf [wor
 | Sujet | Réalisation et preuve | Reste à valider |
 |---|---|---|
 | Backend TypeScript, relationnel et NoSQL — R28 à R30 | NestJS compilé ; PostgreSQL/PostGIS et MongoDB utilisés dans la recette | Déploiement distant |
-| Tests et couverture — R31, R32 | [56 tests et commandes réussies](proofs/verification.json), [couverture](proofs/coverage.txt), [rapport exportable](proofs/coverage-report.zip) | Endpoints non couverts, crashes et concurrence PDF |
+| Tests et couverture — R31, R32 | [62 tests et commandes réussies](proofs/verification.json), [couverture](proofs/coverage.txt), [rapport exportable](proofs/coverage-report.zip) | Endpoints non couverts, crashes et concurrence PDF |
 | Authentification et autorisation — R09, R10, R34, SEC01 à SEC09 | Sessions PostgreSQL, Argon2id, Origin/CSRF, DTO stricts, droits organisationnels ; [tests HTTP](../backend/test/integration/journey.spec.ts) | Recette exhaustive et protections côté navigateur |
 | Données sensibles — R11, SEC10 à SEC12 | AES-256-GCM, fichiers privés, clés versionnées ; tests d'altération et rotation | HTTPS/TLS interservices et exploitation des clés |
 | Automatisation — R19, SEC13 à SEC15 | Trois exports, événements après commit, reçu final et déduplication | Crash/reprise et périmètre complet des accès de service |
@@ -47,7 +47,7 @@ Les chemins du tableau sont relatifs à [backend/src](../backend/src), sauf [wor
 | Frontend et soutenance — autres exigences R | Documents de cadrage disponibles | Frontend TypeScript, responsive, accessibilité, SEO, marché, CDC, pitch et participation collective |
 | Conservation et cadre métier — R21 à R24 | Rétention des explications configurable ; décisions documentées | Purge globale, mentions et vérification du scénario juridique applicable |
 
-La couverture de lignes est **75,99 %**, celle des branches **81,08 %**, sur le processus instrumenté. L'API appelée par n8n tourne séparément et n'entre pas dans ce calcul. Les résultats datent de la dernière vérification du code ; la recette a été relancée après l’intégration FINESS.
+La couverture de lignes est **77,94 %**, celle des branches **82,62 %**, sur le processus instrumenté. L'API appelée par n8n tourne séparément et n'entre pas dans ce calcul. Les résultats datent de la dernière vérification du code ; la recette a été relancée après l’intégration FINESS.
 
 ## Limites de version
 
@@ -74,3 +74,8 @@ Les preuves historiques conservent leur date et leur portée. Une fonction non t
 ## Recette du 15 septembre 2026
 
 Le [bilan actuel](RECETTE_BACKEND_V1.md) detaille les corrections, les preuves et les manques restants. Pagination secondaire et idempotence mission/candidature/besoin realisees ; idempotence documentaire, contrats de sortie complexes, deploiement et restauration complete restent a terminer.
+
+
+## Rectification France Travail du 15 septembre 2026
+
+[Rectificatif du catalogue V1](RECTIFICATIF_CATALOGUE_V1.md) et [contrat des offres externes](OFFRES_EXTERNES_V1.md). Collecte multi-recherches, classement prudent, conservation des informations fournisseur et correspondance sans score complet. Lot Paris : 134 offres importees et rejeu sans doublon ; 120 IDE, 7 IADE, 1 IBODE, 6 non confirmees. Frontend et synchronisation exhaustive restent a completer.

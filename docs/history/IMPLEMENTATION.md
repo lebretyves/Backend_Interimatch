@@ -53,3 +53,7 @@ Les anciens constats de cle manquante sont historiques. Restent notamment le con
 ## Revue et recette V1 du 15 septembre 2026
 
 Demande utilisateur : retester, identifier les manques et corriger. Baseline 48 tests ; apres corrections 56 tests, 75,99 % lignes et 81,08 % branches. Correction de la pagination, des commandes metier rejouables, du classement admissible, de la confirmation apres cloture, du cache prive et de la reprise outbox. Tests ajoutes pour les reprises et conflits de reservation PDF. Cas RPPS FOUND reel confirme, sans profil reel modifie. Bilan detaille : docs/RECETTE_BACKEND_V1.md. Le client doit fournir Idempotency-Key sur les commandes documentees.
+
+
+## 2026-09-15 - Rectification France Travail autorisee
+Utilisateur : appliquer les propositions issues des essais IDE/IADE/IBODE et fournir le rectificatif du catalogue. Explication donnee : externe = source France Travail/partenaire, candidature par redirection ; interne = gere dans InfiMatch. Corrections et tests decrits dans ../RECTIFICATIF_CATALOGUE_V1.md. 62 tests reussis, import reel 134 offres et rejeu sans doublons. Incident du script de preuve HTTP : limite de taille de reponse du client de test, relance reussie apres augmentation explicite de cette limite. Aucun secret dans les preuves.

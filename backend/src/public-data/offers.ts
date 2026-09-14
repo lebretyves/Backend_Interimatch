@@ -1,13 +1,7 @@
 import { createHash } from "node:crypto";
 import { Database } from "../database/database";
-export function clean(value: unknown, max: number): string {
-  if (typeof value !== "string") return "";
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
-}
+import { clean, offerFacts } from "./offer-quality";
+export { clean } from "./offer-quality";
 export function normalizeOffer(raw: any, fetchedAt = new Date().toISOString()) {
   if (
     !raw ||
@@ -19,17 +13,8 @@ export function normalizeOffer(raw: any, fetchedAt = new Date().toISOString()) {
     description = clean(raw.description, 8000);
   if (!title || !description) throw new Error("MISSING_CONTENT");
   if (raw.typeContrat !== "MIS") throw new Error("NOT_TEMPORARY_EMPLOYMENT");
-  const label = title
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase();
-  const qualification = /\bIBODE\b|BLOC OPERATOIRE/.test(label)
-    ? "IBODE"
-    : /\bIADE\b|ANESTHESISTE/.test(label)
-      ? "IADE"
-      : /INFIRMIER/.test(label)
-        ? "IDE"
-        : null;
+  const facts = offerFacts(raw);
+  const qualification = facts.qualification;
   const url =
     "https://candidat.francetravail.fr/offres/recherche/detail/" +
     encodeURIComponent(raw.id);
@@ -43,6 +28,8 @@ export function normalizeOffer(raw: any, fetchedAt = new Date().toISOString()) {
     qualification,
     rawHash: createHash("sha256").update(JSON.stringify(raw)).digest("hex"),
     provenance: {
+      normalizationVersion: 2,
+      facts,
       provider: "FRANCE_TRAVAIL",
       externalId: raw.id,
       sourceUrl: url,
@@ -60,9 +47,15 @@ export function normalizeOffer(raw: any, fetchedAt = new Date().toISOString()) {
     },
   };
 }
-export async function fetchOffers(limit = 50, transport: typeof fetch = fetch) {
+export async function fetchOffers(
+  limit = 50,
+  transport: typeof fetch = fetch,
+  department?: string,
+) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 150)
     throw new Error("Limit must be between 1 and 150");
+  if (department !== undefined && !/^(?:\d{2}|2A|2B|97\d)$/.test(department))
+    throw new Error("Invalid department");
   const id = process.env.FT_CLIENT_ID,
     secret = process.env.FT_CLIENT_SECRET;
   if (!id || !secret)
@@ -87,28 +80,47 @@ export async function fetchOffers(limit = 50, transport: typeof fetch = fetch) {
   const auth: any = await token.json();
   if (typeof auth.access_token !== "string")
     throw new Error("Invalid token response");
-  const url = new URL(
-    "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search",
-  );
-  url.searchParams.set("motsCles", "infirmier");
-  url.searchParams.set("typeContrat", "MIS");
-  url.searchParams.set("range", "0-" + (limit - 1));
-  const res = await transport(url, {
-    headers: {
-      Authorization: "Bearer " + auth.access_token,
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (res.status === 204) return [];
-  if (!res.ok)
-    throw new Error(
-      "France Travail search unavailable (HTTP " + res.status + ")",
+  const unique = new Map<string, any>();
+  // Bounded batch: limit per keyword, not an exhaustive snapshot.
+  for (const keyword of ["infirmier", "IDE", "IADE", "IBODE"]) {
+    const url = new URL(
+      "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search",
     );
-  const data: any = await res.json();
-  if (!Array.isArray(data.resultats) || data.resultats.length > limit)
-    throw new Error("Unexpected offer response");
-  return data.resultats;
+    url.searchParams.set("motsCles", keyword);
+    if (department) url.searchParams.set("departement", department);
+    url.searchParams.set("typeContrat", "MIS");
+    url.searchParams.set("range", "0-" + (limit - 1));
+    const res = await transport(url, {
+      headers: {
+        Authorization: "Bearer " + auth.access_token,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.status === 204) continue;
+    if (!res.ok)
+      throw new Error(
+        "France Travail search unavailable (HTTP " + res.status + ")",
+      );
+    const data: any = await res.json();
+    if (!Array.isArray(data.resultats) || data.resultats.length > limit)
+      throw new Error("Unexpected offer response");
+    for (const offer of data.resultats) {
+      if (
+        !offer ||
+        typeof offer.id !== "string" ||
+        !/^[A-Za-z0-9_-]{1,50}$/.test(offer.id)
+      )
+        throw new Error("Unexpected offer identifier");
+      if (department) {
+        const commune = offer.lieuTravail?.commune;
+        if (typeof commune !== "string" || !commune.startsWith(department))
+          continue;
+      }
+      if (!unique.has(offer.id)) unique.set(offer.id, offer);
+    }
+  }
+  return [...unique.values()];
 }
 export async function importOffers(db: Database, raw: any[], dryRun: boolean) {
   const accepted: ReturnType<typeof normalizeOffer>[] = [];

@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-14T22:24:13.162Z",
+  "date": "2026-09-14T22:58:21.256Z",
   "results": [
     {
       "command": "npm run typecheck",
@@ -14,7 +14,10 @@
       "exitCode": 0
     }
   ],
-  "testsPassed": 56,
-  "scope": "Unit and HTTP integration tests including real local n8n workflows. Provider scripts and separate n8n callback API are not instrumented.",
-  "codeCommit": "e5a2d72db53559d7ee787e95e9d07ecb6d6ea574"
+  "testsPassed": 62,
+  "coverage": {
+    "lines": 77.94,
+    "branches": 82.62
+  },
+  "scope": "Native unit and HTTP integration tests including local n8n. Real France Travail import and replay recorded separately in france-travail-rectification.json."
 }

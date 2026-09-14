@@ -1,6 +1,6 @@
 import { PageDto } from "../common/page.dto";
 import { Query } from "@nestjs/common";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiOperation, ApiProperty } from "@nestjs/swagger";
 import {
   Controller,
   Get,
@@ -21,6 +21,7 @@ import { Database } from "../database/database";
 import { SessionGuard, user, nurse } from "../common/access";
 import { missionSelect } from "../missions/missions.service";
 import { SearchDto, searchSql } from "./search";
+import { externalPresentation } from "../public-data/offer-quality";
 class FavoriteDto {
   @ApiProperty({
     type: () => String,
@@ -36,6 +37,10 @@ class FavoriteDto {
 @Controller()
 class ListingsController {
   constructor(private readonly db: Database) {}
+  @ApiOperation({
+    description:
+      "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
+  })
   @Post("listings/search")
   @UseGuards(SessionGuard)
   async search(@Req() r: Request, @Body() b: SearchDto) {
@@ -82,29 +87,45 @@ class ListingsController {
       bind(b.offset ?? 0);
     const rows = await this.db.query(sql, parameters);
     return {
-      items: rows.map((r) => r.data),
+      items: rows.map((r) =>
+        r.data.kind === "EXTERNAL_OFFER"
+          ? externalPresentation(r.data)
+          : r.data,
+      ),
       limit: b.limit ?? 20,
       offset: b.offset ?? 0,
       unknownExternalFieldsExcluded: strictUnknown,
     };
   }
-  @Get("listings/external") async external(@Query() page: PageDto) {
+  @ApiOperation({
+    description:
+      "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
+  })
+  @Get("listings/external")
+  async external(@Query() page: PageDto) {
     return {
       items: (
         await this.db.query(
-          "SELECT id,source,source_id,title,description,url,location_label,qualification,imported_at,expires_at FROM external_offer WHERE active AND (expires_at IS NULL OR expires_at>now()) ORDER BY imported_at DESC,id LIMIT $1 OFFSET $2",
+          "SELECT id,source,source_id,title,description,url,location_label,qualification,imported_at,expires_at,provenance FROM external_offer WHERE active AND (expires_at IS NULL OR expires_at>now()) ORDER BY imported_at DESC,id LIMIT $1 OFFSET $2",
           [page.limit, page.offset],
         )
-      ).map((e) => ({
-        ...e,
-        id: "e_" + e.id,
-        kind: "EXTERNAL_OFFER",
-        applicationMode: "REDIRECT",
-        eligibility: "INCOMPLETE",
-      })),
+      ).map((e) =>
+        externalPresentation({
+          ...e,
+          id: "e_" + e.id,
+          kind: "EXTERNAL_OFFER",
+          applicationMode: "REDIRECT",
+          eligibility: "INCOMPLETE",
+        }),
+      ),
     };
   }
-  @Get("listings/:id") async detail(@Param("id") id: string) {
+  @ApiOperation({
+    description:
+      "External offers expose correspondence (EXTERNAL_CRITERIA), score=null, eligibilityVerified=false, provider-reported criteria and quality warnings. Unknown fields never prove eligibility; applicationMode=REDIRECT.",
+  })
+  @Get("listings/:id")
+  async detail(@Param("id") id: string) {
     if (
       !/^[me]_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
         id,
@@ -117,7 +138,7 @@ class ListingsController {
         [id.slice(2)],
       );
       if (!e) throw new NotFoundException();
-      return { ...e, id, kind: "EXTERNAL_OFFER", applicationMode: "REDIRECT" };
+      return externalPresentation({ ...e, id });
     }
     const [m] = await this.db.query(
       missionSelect +

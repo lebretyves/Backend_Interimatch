@@ -2,7 +2,7 @@
 
 ## État actuel
 
-Le backend a été relu contre le prompt V1 puis retesté : **56 tests réussis**, compilation et typecheck réussis, couverture lignes 75,99 %, branches 81,08 %. Lire [le bilan complet](RECETTE_BACKEND_V1.md) avant de déclarer une fonctionnalité validée.
+Le backend a été relu contre le prompt V1 puis retesté : **62 tests réussis**, compilation et typecheck réussis, couverture lignes 77,94 %, branches 82,62 %. Lire [le bilan complet](RECETTE_BACKEND_V1.md) avant de déclarer une fonctionnalité validée.
 
 Sources figées et quatre empreintes contrôlées ; nouvelle numérotation du Word. Objectif 100 % de la V1, équipe de quatre et délai de onze jours. Aucun retrait de périmètre.
 
@@ -45,3 +45,8 @@ GitHub : https://github.com/lebretyves/Backend_Interimatch, branche master. Les 
 La restauration isolée du premier dump PostgreSQL et la restauration/compilation du code 28923fc sont des preuves historiques, pas une restauration complète du dernier environnement. Lire docs/proofs et leurs dates.
 
 Le [journal](history/IMPLEMENTATION.md) conserve les incidents et états antérieurs ; cette note décrit seulement le dernier état.
+
+
+## Rectification France Travail du 15 septembre 2026
+
+[Rectificatif du catalogue V1](RECTIFICATIF_CATALOGUE_V1.md) et [contrat des offres externes](OFFRES_EXTERNES_V1.md). Collecte multi-recherches, classement prudent, conservation des informations fournisseur et correspondance sans score complet. Lot Paris : 134 offres importees et rejeu sans doublon ; 120 IDE, 7 IADE, 1 IBODE, 6 non confirmees. Frontend et synchronisation exhaustive restent a completer.

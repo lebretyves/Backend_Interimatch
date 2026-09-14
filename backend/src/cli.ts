@@ -58,10 +58,15 @@ cli
   });
 cli
   .command("import-offers")
-  .option("--limit <number>", "Maximum offers", "50")
+  .option(
+    "--limit <number>",
+    "Maximum offers per keyword (4 queries, up to 150 each)",
+    "50",
+  )
+  .option("--department <code>", "Department, e.g. 75; commune checked locally")
   .option("--dry-run", "Acquire and normalize without database writes", false)
   .action(async (opts) => {
-    const raw = await fetchOffers(Number(opts.limit));
+    const raw = await fetchOffers(Number(opts.limit), fetch, opts.department);
     const db = await new Database().connect();
     try {
       console.log(
