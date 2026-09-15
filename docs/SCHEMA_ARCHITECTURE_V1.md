@@ -36,3 +36,6 @@ Exécution : `python scripts/draw-architecture.py`.
 Schéma relu visuellement après export. Aucun changement de comportement du backend dans cette mise à jour.
 
 Voir [les exigences](REQUIREMENTS_V1.md), [les flux](FLUX_V1.md), [la comparaison partielle](OFFRES_EXTERNES_V1.md) et [les preuves](proofs/verification.json).
+
+
+Vue distincte : [architecture cible lorsque la V1 sera finalisee](SCHEMA_ARCHITECTURE_CIBLE_V1.md).

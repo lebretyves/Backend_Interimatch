@@ -65,3 +65,7 @@ Demande utilisateur : implementer la gestion des informations manquantes et four
 
 ## 2026-09-15 - Schema architecture actualise
 Demande utilisateur : refaire le schema fourni plus clairement et selon le backend actuel. Exports PNG/PDF/SVG et source de generation ajoutes. Roles RPPS, FINESS et France Travail separes ; worker et trois workflows n8n locaux visibles ; frontend, proxy HTTPS et n8n Cloud marques a integrer. Deux modes de matching et limite ETP explicites. Controle visuel effectue, aucune modification du backend.
+
+
+## Architecture cible de la V1 finalisee
+Demande utilisateur : montrer le schema lorsque le projet sera termine. Vue cible separee en PNG/PDF/SVG, avec frontend, proxy HTTPS et n8n Cloud raccordes. Controle visuel effectue. Aucun deploiement ni changement du backend realise dans cette mise a jour.
