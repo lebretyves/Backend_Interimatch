@@ -61,3 +61,7 @@ Utilisateur : appliquer les propositions issues des essais IDE/IADE/IBODE et fou
 
 ## 2026-09-15 - Comparaison partielle des annonces externes
 Demande utilisateur : implementer la gestion des informations manquantes et fournir une explication transmissible. Comparaison privee au profil, champs a completer/a confirmer, incompatibilites connues, indices et option explicite de pistes incompletes. 71 tests passes ; HTTP prive et absence de fuite entre deux profils verifies. 134 offres reelles acquises, comparees a des profils fictifs sans mutation. Aucun score complet externe. Le catalogue original reste en attente de remplacement, bloque precedemment par Windows ; son etat nest pas change par cette livraison.
+
+
+## 2026-09-15 - Schema architecture actualise
+Demande utilisateur : refaire le schema fourni plus clairement et selon le backend actuel. Exports PNG/PDF/SVG et source de generation ajoutes. Roles RPPS, FINESS et France Travail separes ; worker et trois workflows n8n locaux visibles ; frontend, proxy HTTPS et n8n Cloud marques a integrer. Deux modes de matching et limite ETP explicites. Controle visuel effectue, aucune modification du backend.

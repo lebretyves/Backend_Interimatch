@@ -1,56 +1,38 @@
-# Architecture InfiMatch V1
+# Architecture InfiMatch V1 — état au 15 septembre 2026
 
-Vue synchronisÃ©e avec le backend du commit `05e1711`. API, worker et CLI partagent le code NestJS ; le worker est un processus sÃ©parÃ©. Le frontend reste Ã  intÃ©grer et les accÃ¨s fournisseurs rÃ©els Ã  valider. Le proxy HTTPS appartient au dÃ©ploiement restant Ã  rÃ©aliser.
+![Architecture actuelle et intégrations prévues](diagrams/architecture-infimatch-v1.png)
 
-```mermaid
-flowchart LR
-    subgraph client["AccÃ¨s"]
-        caller["Client HTTP local"]
-        front["Frontend Next.js prÃ©vu"]
-    end
-    subgraph service["Backend : mÃªme code NestJS"]
-        api["API HTTP : main.ts"]
-        worker["Worker outbox : worker.ts"]
-        cli["CLI : cli.ts"]
-    end
-    subgraph datastore["Stockages locaux privÃ©s"]
-        sql["PostgreSQL / PostGIS : vÃ©ritÃ© mÃ©tier"]
-        mongo["MongoDB : explications de matching"]
-        files["Fichiers privÃ©s AES-256-GCM"]
-    end
-    subgraph async["Automatisation"]
-        n8n["n8n : 3 workflows et volume technique"]
-    end
-    subgraph external["AccÃ¨s rÃ©els restant Ã  valider"]
-        ans["ANS : RPPS"]
-        ft["France Travail : offres, accès vérifié"]
-        finess["ANS / data.gouv.fr : snapshot FINESS"]
-    end
-    caller -->|"Cookie, Origin, CSRF"| api
-    front -.->|"IntÃ©gration Ã  rÃ©aliser"| api
-    api -->|"Transactions, sessions, audit, outbox"| sql
-    api -->|"Historique minimisÃ© et expiration"| mongo
-    api -->|"Chiffrement et tÃ©lÃ©chargement autorisÃ©"| files
-    worker -->|"RÃ©servation et reÃ§u final"| sql
-    cli -->|"Migrations, import, rÃ©paration documentaire"| sql
-    cli -->|"RÃ©conciliation des fichiers"| files
-    worker -.->|"Ã‰vÃ©nements aprÃ¨s commit"| n8n
-    n8n -.->|"Routes internes authentifiÃ©es"| api
-    api -.->|"Recherche exacte RPPS"| ans
-    cli -.->|"Acquisition des offres"| ft
-    cli -.->|"Import du fichier officiel téléchargé"| finess
-```
+[PNG](diagrams/architecture-infimatch-v1.png) · [PDF vectoriel](diagrams/architecture-infimatch-v1.pdf) · [SVG modifiable](diagrams/architecture-infimatch-v1.svg)
 
-PostgreSQL est la source de vÃ©ritÃ© des comptes, affiliations, profils, missions, candidatures, affectations, sessions, favoris, notifications, audits, mÃ©tadonnÃ©es documentaires et Ã©vÃ©nements. PostGIS et btree_gist sont des extensions de cette mÃªme base. Les migrations remplacent toute synchronisation automatique du schÃ©ma.
+Les pointillés orange du visuel désignent les éléments prévus ou non raccordés : frontend Next.js, reverse proxy HTTPS et n8n Cloud. Le backend est actuellement exécuté en HTTP local. La présence du proxy dans le schéma ne constitue pas une validation du chiffrement en transit.
 
-MongoDB conserve uniquement les explications minimisÃ©es et versionnÃ©es du matching. Sa panne ne doit pas Ãªtre interprÃ©tÃ©e comme une absence de correspondances : l'API signale l'indisponibilitÃ© de l'historique. Les fichiers chiffrÃ©s restent privÃ©s et sont dÃ©livrÃ©s par l'API aprÃ¨s contrÃ´le des droits.
+## Backend et stockages
+Le monolithe modulaire NestJS partage ses règles entre l'API, le worker et la CLI. Ce sont des processus distincts, sans découpage en microservices.
+- PostgreSQL / PostGIS : comptes, profils, missions internes (`mission`), annonces externes (`external_offer`), candidatures, affectations, FINESS, notifications, sessions, audits et événements outbox.
+- MongoDB : explications minimisées et versionnées du matching interne, avec expiration. La comparaison partielle externe est calculée à la lecture et n'y est pas stockée.
+- Fichiers privés : documents fictifs et confirmations PDF, chiffrés en AES-256-GCM, accessibles via l'API après contrôle des droits.
 
-n8n orchestre trois workflows. Les rÃ¨gles mÃ©tier et la gÃ©nÃ©ration PDF restent dans le backend ; n8n possÃ¨de son propre volume technique. Aucun fournisseur ne dÃ©cide d'une affectation. L'agence valide humainement l'affectation, sans ajouter une validation manuelle du RPPS.
+Les flèches principales du visuel décrivent les flux logiques ; elles ne représentent pas chaque lecture SQL ni chaque réponse réseau. Le worker lit explicitement les événements PostgreSQL, appelle n8n puis contrôle le reçu final en base.
 
-Les pointillÃ©s reprÃ©sentent les intÃ©grations externes, asynchrones ou prÃ©vues, selon leur libellÃ©. Les connexions du Compose sont locales ; ce dessin ne constitue pas une preuve de TLS en production. Aucun connecteur FINESS rÃ©el n'est reprÃ©sentÃ© : le champ FINESS est obligatoire pour un Ã©tablissement, mais ne confÃ¨re aucun droit d'accÃ¨s.
+## Sources réelles
+L'API Annuaire Santé FHIR est appelée pour le RPPS. Elle ne passe pas par l'import des annonces.
+France Travail fournit les annonces JSON, acquises et normalisées par la CLI. FINESS provient d'un fichier officiel téléchargé puis importé dans le référentiel local.
+Les accès réels France Travail, FINESS et RPPS ont été testés. FINESS ne prouve ni un besoin de recrutement ni un partenariat.
 
-Source modifiable : [architecture-v1.mmd](architecture-v1.mmd). Voir le [plan des fichiers](PLAN_ARCHITECTURE_V1.md), les [flux dÃ©taillÃ©s](FLUX_V1.md), les [exigences](REQUIREMENTS_V1.md) et la [reprise](REPRISE_BACKEND_V1.md).
+## Automatisations
+Trois workflows n8n sont testés en local : notification de correspondance, relance de mission non pourvue et confirmation de mission. Le worker déclenche les workflows sur événements ; la relance possède également un déclencheur horaire.
+n8n orchestre les appels ; les règles métier, les notifications en base et la génération PDF restent dans le backend.
+Les notifications sont internes à InfiMatch. L'instance n8n Cloud fournie n'est pas raccordée.
 
-Mise à jour : France Travail et FINESS importés réellement ; [preuves et limites](ACQUISITION_REELLE.md).
+## Deux modes de comparaison
+Pour les missions internes : contrôles d'admissibilité, puis score expliqué. Les pondérations 45 / 25 / 20 / 10 sont expérimentales et à réévaluer.
+Pour les annonces externes : comparaison partielle au profil connecté, sans score global ni disponibilité présumée. L'option explicite de recherche peut inclure des pistes incomplètes en signalant les filtres non vérifiés.
+L'agence valide humainement l'affectation. Le contrôle complet des deux années réglementaires en équivalent temps plein n'est pas implémenté ; le plafond d'expérience du score n'en constitue pas une validation.
 
-Recette actuelle : [RECETTE_BACKEND_V1.md](RECETTE_BACKEND_V1.md). Acces RPPS positif et negatif verifies.
+## Sources modifiables et reproduction
+[Source Mermaid](architecture-v1.mmd) : vue logique complémentaire. Ses pointillés identifient les appels externes ou les intégrations prévues selon leur libellé ; la légende orange s'applique au visuel PNG/PDF/SVG.
+[Script de dessin](../scripts/draw-architecture.py) : génère les trois exports. Outil documentaire facultatif sous Windows, avec Python, reportlab, Pillow, pypdfium2 et les polices Arial Windows. Le backend Node n'en dépend pas.
+Exécution : `python scripts/draw-architecture.py`.
+Schéma relu visuellement après export. Aucun changement de comportement du backend dans cette mise à jour.
+
+Voir [les exigences](REQUIREMENTS_V1.md), [les flux](FLUX_V1.md), [la comparaison partielle](OFFRES_EXTERNES_V1.md) et [les preuves](proofs/verification.json).
